@@ -21,7 +21,7 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        GeneratedPluginRegistrant.registerWith(getFlutterEngine());
+//        GeneratedPluginRegistrant.registerWith(getFlutterEngine());
 
         new MethodChannel(getFlutterEngine().getDartExecutor().getBinaryMessenger()
                 , "com.flutter.service")

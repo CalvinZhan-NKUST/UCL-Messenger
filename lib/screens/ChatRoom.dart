@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
@@ -37,6 +36,7 @@ int _msgMaxSN = 0;
 int _newMsg = 0;
 String _pollingText = '';
 String _pollingName = '';
+String _reportRoomID = '';
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
@@ -66,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
     var response = await http.post(url, body: {
       'RoomID': widget.roomID,
       'MsgID': _msgMaxSN.toString(),
-      'MsgPara': '5'
+      'MsgPara': globalString.msgPara
     });
     print('Response body:${response.body}');
 
@@ -109,6 +109,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     setLocate(widget.roomID);
     DB.updateLocate(widget.roomID);
+    _reportRoomID = widget.roomID;
     _messages.clear();
     _sendIDList.clear();
     _text.clear();
@@ -153,9 +154,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     IconButton(
                       icon: Icon(Icons.send),
                       onPressed: () => {
-                        if (_chatController.text!=''){
-                          _submitText(_chatController.text)
-                        }
+                        if (_chatController.text != '')
+                          {_submitText(_chatController.text)}
                       },
                     ),
                   ],
@@ -198,35 +198,70 @@ class MessageSend extends StatelessWidget {
   final String send;
 
   MessageSend({Key key, this.text, this.send}) : super(key: key);
+  final GlobalKey anchorKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 1.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          Flexible(
-            child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              color: Colors.blueAccent,
-              padding: EdgeInsets.all(10.0),
-              child: Text(text,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 5,
-                  style: TextStyle(fontSize: 18.0, color: Colors.white)),
-            ),
-          ),
-          Column(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: AssetImage('assets/005.png'),
+    return GestureDetector(
+      onTap: () {
+        print('$text, $send');
+      },
+      onLongPressStart: (detail) {
+        RenderBox renderBox = anchorKey.currentContext.findRenderObject();
+        var offset =
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
+              detail.globalPosition.dx, offset.dy),
+          elevation: 10,
+          items: <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+                value: 'value01',
+                child: FlatButton(
+                  child: Text('檢舉這則訊息'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    final scaffold = Scaffold.of(context);
+                    scaffold.showSnackBar(SnackBar(
+                      content: Text("已收到您檢舉"),
+                      action: SnackBarAction(
+                          label: '確定', onPressed: scaffold.hideCurrentSnackBar),
+                    ));
+                    sendReport(send, text);
+                  },
+                )),
+//            PopupMenuDivider(),  //這是分隔線
+          ],
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Flexible(
+              child: Container(
+                margin: const EdgeInsets.only(right: 10),
+                color: Colors.blueAccent,
+                padding: EdgeInsets.all(10.0),
+                child: Text(text,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 5,
+                    style: TextStyle(fontSize: 18.0, color: Colors.white)),
               ),
-              Text(send)
-            ],
-          ),
-        ],
+            ),
+            Column(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: AssetImage('assets/005.png'),
+                ),
+                Text(send, key: anchorKey)
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -237,35 +272,73 @@ class MessageReceive extends StatelessWidget {
   final String send;
 
   MessageReceive({Key key, this.text, this.send}) : super(key: key);
+  final GlobalKey anchorKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 1.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: <Widget>[
-          Column(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: AssetImage('assets/005.png'),
-              ),
-              Text(send)
-            ],
-          ),
-          Flexible(
-            child: Container(
-              margin: EdgeInsets.only(left: 10),
-              color: Colors.red,
-              padding: EdgeInsets.all(10.0),
-              child: Text(text,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 5,
-                  style: TextStyle(fontSize: 18.0, color: Colors.white)),
+    return GestureDetector(
+      onTap: () {
+        print('$text, $send');
+      },
+      onLongPressStart: (detail) {
+        RenderBox renderBox = anchorKey.currentContext.findRenderObject();
+        var offset =
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
+              detail.globalPosition.dx, offset.dy),
+          elevation: 10,
+          items: <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+                value: 'value01',
+                child: FlatButton(
+                  child: Text('檢舉這則訊息'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    final scaffold = Scaffold.of(context);
+                    scaffold.showSnackBar(SnackBar(
+                      content: Text("已收到您檢舉"),
+                      action: SnackBarAction(
+                          label: '確定', onPressed: scaffold.hideCurrentSnackBar),
+                    ));
+                    sendReport(send, text);
+                  },
+                )),
+//            PopupMenuDivider(),  //這是分隔線
+          ],
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: <Widget>[
+            Column(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: AssetImage('assets/005.png'),
+                ),
+                Text(
+                  send,
+                  key: anchorKey,
+                )
+              ],
             ),
-          ),
-        ],
+            Flexible(
+              child: Container(
+                margin: EdgeInsets.only(left: 10),
+                color: Colors.red,
+                padding: EdgeInsets.all(10.0),
+                child: Text(text,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 5,
+                    style: TextStyle(fontSize: 18.0, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -310,3 +383,15 @@ void setNewMsg(int getMsg, String name, String text) {
   _pollingText = text;
   _newMsg = getMsg;
 }
+
+void sendReport(String send, String text) async{
+  final Email email = Email(
+    body: 'RoomID:$_reportRoomID, Send:$send, Text:$text',
+    subject: 'UCL Messenger Report Email',
+    recipients: ['F108118121@nkust.edu.tw'],
+    isHTML: false,
+  );
+  await FlutterEmailSender.send(email);
+  print('Email寄出');
+}
+

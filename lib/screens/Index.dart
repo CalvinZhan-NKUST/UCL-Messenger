@@ -1,11 +1,13 @@
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/screens/ChatRoom.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_msg/GlobalVariable.dart' as globalString;
+import 'package:flutter_msg/ControllerAndroidService.dart' as serviceAndroid;
 
 // ignore: must_be_immutable
 class IndexScreen extends StatefulWidget {
@@ -46,7 +48,8 @@ class _IndexScreenState extends State<IndexScreen> {
     polling.setUserID(widget.userID);
     print('Index init');
     DB.updateLocate('Index');
-    _runService();
+    getMsgPara();
+    serviceAndroid.runService();
   }
 
   @override
@@ -63,24 +66,18 @@ class _IndexScreenState extends State<IndexScreen> {
     super.dispose();
   }
 
-  Future<void> _runService() async {
-    if (Platform.isAndroid) {
-      var methodChannel = MethodChannel("com.flutter.service");
-      String data = await methodChannel.invokeMethod("startService");
-      print("data:$data");
-    } else if (Platform.isIOS) {
-      print('This is iOS device.');
-    }
-  }
 
-  Future<void> _stopService() async {
-    if (Platform.isAndroid) {
-      var methodChannel = MethodChannel("com.flutter.service");
-      String data = await methodChannel.invokeMethod("stopService");
-      print("data:$data");
-    } else if (Platform.isIOS) {
-      print('This is iOS device.');
-    }
+
+  void getMsgPara() async{
+    var url = '${globalString.ipMysql}/getConfigPara';
+    print(url);
+    var response =
+        await http.post(url, body: {'UserID': widget.userID});
+    print('getConfigPara body:${response.body}');
+    res = jsonDecode(response.body);
+    print(res['MsgPara']);
+    globalString.setPara(res['MsgPara']);
+    print('globalMsgPara:${globalString.msgPara}');
   }
 
 //  Future<void> _sendRoomList() async{

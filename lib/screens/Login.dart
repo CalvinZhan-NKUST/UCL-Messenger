@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' as io;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:flutter_apns/flutter_apns.dart';
+import 'package:flutter_msg/storage.dart' as apnStorage;
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -26,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   TextEditingController passwordController = new TextEditingController();
   static const BasicMessageChannel<String> platform =
       BasicMessageChannel<String>(_channel, StringCodec());
+  String _token = '';
 
   final connector = createPushConnector();
   Future<void> _register() async {
@@ -37,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onBackgroundMessage: _onBackgroundMessage,
     );
     connector.token.addListener(() {
+      _token = connector.token.value.toString();
       print('Token ${connector.token.value}');
     });
     connector.requestNotificationPermissions();
@@ -61,16 +65,17 @@ class _HomeScreenState extends State<HomeScreen> {
           intentIdentifiers: [],
           options: UNNotificationCategoryOptions.values,
         ),
+
       ]);
     }
   }
 
   Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
-//    storage.append('$name: $payload');
+    apnStorage.storage.append('$name: $payload');
     print('Name:$name, payload:${payload.toString()}');
     final action = UNNotificationAction.getIdentifier(payload);
     if (action == 'MEETING_INVITATION') {
-      // do something
+      print('點選通知欄');
     }
     return Future.value(true);
   }
@@ -80,7 +85,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void initState() {
-    _register();
+    if (io.Platform.isIOS){
+      _register();
+    }
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
@@ -198,6 +205,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       DB.insertUser(int.parse(userID), userName);
       DB.insertLocate(1, 'Login');
+
+      if(io.Platform.isIOS){
+        var tokenURL = '${globalString.ipRedis}/saveToken';
+        var saveToken = await http.post(tokenURL, body: {'UserID':userID, 'Token':_token});
+        print('SaveToken body:${saveToken.body}');
+      }
 
       var roomURL = '${globalString.ipMysql}/getChatRoomList';
       var chatRoom = await http
