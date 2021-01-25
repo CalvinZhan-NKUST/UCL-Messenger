@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const BasicMessageChannel<String> platform =
       BasicMessageChannel<String>(_channel, StringCodec());
   String _token = '';
-  int _serverVersion = 0;
+  String _serverVersion = '';
   int _sendClick = 0;
 
   final connector = createPushConnector();
@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
     var responseVersion = await http.post(_checkUrl);
     resVersion = jsonDecode(responseVersion.body);
     print('Server:${resVersion['NowVersion']},Client:$version');
-    _serverVersion = resVersion['NowVersion'];
+    _serverVersion = resVersion['NowVersion'].toString();
   }
 
   @override

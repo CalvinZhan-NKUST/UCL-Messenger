@@ -12,7 +12,7 @@
     <application
         android:name="io.flutter.app.FlutterApplication"
         android:label="UCL Messenger"
-        android:icon="@mipmap/app_icon">
+        android:icon="@mipmap/ic_launcher">
         <service
             android:name=".notifyUnit"
             android:enabled="true"
