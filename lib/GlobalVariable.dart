@@ -7,6 +7,7 @@ String eulaContent = '\n為了社群的環境，營造良好的社交環境，�
 String contentErr = '帳號或密碼錯誤\n請重新輸入';
 String msgPara = '';
 String login = 'none';
+String appVersion = '1.1';
 
 void setPara(String str){
   msgPara = str;

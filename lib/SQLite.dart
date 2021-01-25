@@ -48,7 +48,7 @@ void updateLocate(String place) async {
     join(await getDatabasesPath(), 'chatroom.db'),
   );
   final Database db = await database;
-  await db.execute('UPDATE locate SET Place=$place WHERE LocatedID=1');
+  await db.execute('UPDATE locate SET Place=$place WHERE LocateID=1');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;

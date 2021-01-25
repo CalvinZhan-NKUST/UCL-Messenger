@@ -47,7 +47,7 @@ class _IndexScreenState extends State<IndexScreen> {
     polling.setRoomList(widget.roomList);
     polling.setUserID(widget.userID);
     print('Index init');
-    DB.updateLocate('Index');
+//    DB.updateLocate('Index');
     getMsgPara();
     serviceAndroid.runService();
   }
@@ -62,7 +62,7 @@ class _IndexScreenState extends State<IndexScreen> {
   Future<void> dispose() async {
     _roomList.clear();
     print('Index dispose');
-    DB.updateLocate('none');
+//    DB.updateLocate('none');
     super.dispose();
   }
 

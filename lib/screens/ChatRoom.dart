@@ -93,7 +93,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> dispose() async {
     setLocate('none');
-    DB.updateLocate('none');
     _messages.clear();
     _sendIDList.clear();
     _text.clear();
@@ -108,7 +107,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     setLocate(widget.roomID);
-    DB.updateLocate(widget.roomID);
     _reportRoomID = widget.roomID;
     _messages.clear();
     _sendIDList.clear();
@@ -154,7 +152,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     IconButton(
                       icon: Icon(Icons.send),
                       onPressed: () => {
-                        if (_chatController.text != '')
+                        if (_chatController.text.isEmpty==false)
                           {_submitText(_chatController.text)}
                       },
                     ),
@@ -165,6 +163,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _submitText(String content) async {
+    setState(() {
+      _messages.insert(0, MessageSend(text: content, send: widget.userName)
+//          Container(
+//            child: Text(text),
+//            alignment: Alignment.centerRight,
+//          ));
+      );
+      _chatController.clear();
+    });
     print(widget.roomID);
     print(widget.userID);
     print(widget.userName);
@@ -181,15 +188,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     print('Response body:${response.body}');
     print(content);
-    setState(() {
-      _messages.insert(0, MessageSend(text: content, send: widget.userName)
-//          Container(
-//            child: Text(text),
-//            alignment: Alignment.centerRight,
-//          ));
-          );
-      _chatController.clear();
-    });
   }
 }
 
@@ -224,7 +222,7 @@ class MessageSend extends StatelessWidget {
                     Navigator.of(context).pop();
                     final scaffold = Scaffold.of(context);
                     scaffold.showSnackBar(SnackBar(
-                      content: Text("已收到您檢舉"),
+                      content: Text("檢舉訊息即將透過Email傳送"),
                       action: SnackBarAction(
                           label: '確定', onPressed: scaffold.hideCurrentSnackBar),
                     ));
@@ -298,7 +296,7 @@ class MessageReceive extends StatelessWidget {
                     Navigator.of(context).pop();
                     final scaffold = Scaffold.of(context);
                     scaffold.showSnackBar(SnackBar(
-                      content: Text("已收到您檢舉"),
+                      content: Text("檢舉訊息即將透過Email傳送"),
                       action: SnackBarAction(
                           label: '確定', onPressed: scaffold.hideCurrentSnackBar),
                     ));

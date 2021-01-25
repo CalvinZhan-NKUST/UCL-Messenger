@@ -29,8 +29,11 @@ class _HomeScreenState extends State<HomeScreen> {
   static const BasicMessageChannel<String> platform =
       BasicMessageChannel<String>(_channel, StringCodec());
   String _token = '';
+  int _serverVersion = 0;
+  int _sendClick = 0;
 
   final connector = createPushConnector();
+
   Future<void> _register() async {
     final connector = this.connector;
     connector.configure(
@@ -65,29 +68,39 @@ class _HomeScreenState extends State<HomeScreen> {
           intentIdentifiers: [],
           options: UNNotificationCategoryOptions.values,
         ),
-
       ]);
     }
   }
 
   Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
     apnStorage.storage.append('$name: $payload');
+    print('我點了通知欄');
     print('Name:$name, payload:${payload.toString()}');
     final action = UNNotificationAction.getIdentifier(payload);
-    if (action == 'MEETING_INVITATION') {
-      print('點選通知欄');
-    }
+    print('action:${action.toString()}');
+    if (name == 'onLaunch') {}
     return Future.value(true);
   }
 
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
       onPush('onBackgroundMessage', data);
 
+  void checkAppVersion(String version) async{
+    String _checkUrl = '${globalString.ipMysql}/getVersionCode';
+    Map<String, dynamic> resVersion;
+
+    var responseVersion = await http.post(_checkUrl);
+    resVersion = jsonDecode(responseVersion.body);
+    print('Server:${resVersion['NowVersion']},Client:$version');
+    _serverVersion = resVersion['NowVersion'];
+  }
+
   @override
   void initState() {
-    if (io.Platform.isIOS){
+    if (io.Platform.isIOS) {
       _register();
     }
+    _sendClick = 0;
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
@@ -114,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    checkAppVersion(globalString.appVersion);
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 22), //水平間距
@@ -168,8 +182,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white),
               ),
               color: Colors.black,
-              onPressed: () => _btnClick(schoolIDController.text.trim(),
-                  passwordController.text.trim()),
+              onPressed: () {
+                if (_sendClick == 0) {
+                  _sendClick = 1;
+                  _btnClick(schoolIDController.text.trim(),
+                      passwordController.text.trim());
+                }
+              },
               shape: StadiumBorder(side: BorderSide()),
             ),
           ),
@@ -206,9 +225,10 @@ class _HomeScreenState extends State<HomeScreen> {
       DB.insertUser(int.parse(userID), userName);
       DB.insertLocate(1, 'Login');
 
-      if(io.Platform.isIOS){
+      if (io.Platform.isIOS) {
         var tokenURL = '${globalString.ipRedis}/saveToken';
-        var saveToken = await http.post(tokenURL, body: {'UserID':userID, 'Token':_token});
+        var saveToken = await http
+            .post(tokenURL, body: {'UserID': userID, 'Token': _token});
         print('SaveToken body:${saveToken.body}');
       }
 
@@ -232,9 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
               content: Text(
                 '${globalString.eulaContent}',
                 textAlign: TextAlign.left,
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18),
+                style: TextStyle(color: Colors.black, fontSize: 18),
               ),
               title: Center(
                   child: Text(
@@ -247,6 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: <Widget>[
                 CupertinoButton(
                     onPressed: () {
+                      _sendClick = 0;
                       Navigator.of(context).pop();
                       Navigator.push(
                           context,
@@ -259,16 +278,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   nameList: _nameList,
                                   idList: _idList)));
                     },
-                    child: Text('同意', style: TextStyle(
-                      fontSize: 18
-                    ),)),
+                    child: Text(
+                      '同意',
+                      style: TextStyle(fontSize: 18),
+                    )),
                 CupertinoButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('不同意', style: TextStyle(
-            fontSize: 18),
-                ))
+                    onPressed: () {
+                      _sendClick = 0;
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      '不同意',
+                      style: TextStyle(fontSize: 18),
+                    ))
               ],
             );
           });
@@ -289,12 +311,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 FlatButton(
                     onPressed: () {
                       Navigator.of(context).pop();
+                      _sendClick = 0;
                     },
-                    child: Text('確定',
-                    style: TextStyle(
-                      color:Colors.blue,
-                      fontSize: 18
-                    ),)),
+                    child: Text(
+                      '確定',
+                      style: TextStyle(color: Colors.blue, fontSize: 18),
+                    )),
               ],
             );
           });
