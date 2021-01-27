@@ -37,6 +37,7 @@ int _newMsg = 0;
 String _pollingText = '';
 String _pollingName = '';
 String _reportRoomID = '';
+String _textInput = '';
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
@@ -151,9 +152,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     IconButton(
                       icon: Icon(Icons.send),
-                      onPressed: () => {
-                        if (_chatController.text.isEmpty==false)
-                          {_submitText(_chatController.text)}
+                      onPressed: () {
+                        _textInput = _chatController.text.trim();
+                        if (_textInput.isEmpty==false)
+                          {
+                            _submitText(_chatController.text.trim());
+                          }
                       },
                     ),
                   ],
