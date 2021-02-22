@@ -63,11 +63,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _checkMsg() async {
     print('checkMsg ${widget.roomID}');
-    var url = '${globalString.ipRedis}/getMsg';
+    var url = '${globalString.GlobalString.ipRedis}/getMsg';
     var response = await http.post(url, body: {
       'RoomID': widget.roomID,
       'MsgID': _msgMaxSN.toString(),
-      'MsgPara': globalString.msgPara
+      'MsgPara': globalString.GlobalString.msgPara
     });
     print('Response body:${response.body}');
 
@@ -179,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
     print(widget.roomID);
     print(widget.userID);
     print(widget.userName);
-    var url = '${globalString.ipRedis}/send';
+    var url = '${globalString.GlobalString.ipRedis}/send';
     var response = await http.post(url, body: {
       'RoomID': widget.roomID,
       'SendUserID': widget.userID,

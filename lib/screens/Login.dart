@@ -3,14 +3,12 @@ import 'dart:io' as io;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_msg/screens/Index.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:flutter_apns/flutter_apns.dart';
-import 'package:flutter_msg/storage.dart' as apnStorage;
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -28,84 +26,57 @@ class _HomeScreenState extends State<HomeScreen> {
   TextEditingController passwordController = new TextEditingController();
   static const BasicMessageChannel<String> platform =
       BasicMessageChannel<String>(_channel, StringCodec());
-  String _token = '';
   String _serverVersion = '';
   int _sendClick = 0;
 
-  final connector = createPushConnector();
-
-  Future<void> _register() async {
-    final connector = this.connector;
-    connector.configure(
-      onLaunch: (data) => onPush('onLaunch', data),
-      onResume: (data) => onPush('onResume', data),
-      onMessage: (data) => onPush('onMessage', data),
-      onBackgroundMessage: _onBackgroundMessage,
-    );
-    connector.token.addListener(() {
-      _token = connector.token.value.toString();
-      print('Token ${connector.token.value}');
-    });
-    connector.requestNotificationPermissions();
-
-    if (connector is ApnsPushConnector) {
-      connector.shouldPresent = (x) => Future.value(true);
-      connector.setNotificationCategories([
-        UNNotificationCategory(
-          identifier: 'MEETING_INVITATION',
-          actions: [
-            UNNotificationAction(
-              identifier: 'ACCEPT_ACTION',
-              title: 'Accept',
-              options: UNNotificationActionOptions.values,
-            ),
-            UNNotificationAction(
-              identifier: 'DECLINE_ACTION',
-              title: 'Decline',
-              options: [],
-            ),
-          ],
-          intentIdentifiers: [],
-          options: UNNotificationCategoryOptions.values,
-        ),
-      ]);
-    }
-  }
-
-  Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
-    apnStorage.storage.append('$name: $payload');
-    print('我點了通知欄');
-    print('Name:$name, payload:${payload.toString()}');
-    final action = UNNotificationAction.getIdentifier(payload);
-    print('action:${action.toString()}');
-    if (name == 'onLaunch') {}
-    return Future.value(true);
-  }
-
-  Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
-      onPush('onBackgroundMessage', data);
 
   void checkAppVersion(String version) async{
-    String _checkUrl = '${globalString.ipMysql}/getVersionCode';
+    String _checkUrl = '${globalString.GlobalString.ipMysql}/getVersionCode';
     Map<String, dynamic> resVersion;
 
     var responseVersion = await http.post(_checkUrl);
     resVersion = jsonDecode(responseVersion.body);
     print('Server:${resVersion['NowVersion']},Client:$version');
     _serverVersion = resVersion['NowVersion'].toString();
+    if (_serverVersion!=version){
+      showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext context) {
+            return CupertinoAlertDialog(
+              content: Text(
+                '${globalString.GlobalString.versionErr}',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
+              actions: <Widget>[
+                FlatButton(
+                    onPressed: () async {
+                      if(io.Platform.isIOS){
+                        await launch(globalString.GlobalString.iOSAppUrlLink);
+                      }else if (io.Platform.isAndroid){
+                        await launch(globalString.GlobalString.androidAppUrlLink);
+                      }
+                    },
+                    child: Text(
+                      '更新',
+                      style: TextStyle(color: Colors.blue, fontSize: 18),
+                    )),
+              ],
+            );
+          });
+    }
   }
 
   @override
   void initState() {
-    if (io.Platform.isIOS) {
-      _register();
-    }
     _sendClick = 0;
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
     DB.connectDB();
-    DB.deleteRoom();
     permissionRequest();
     super.initState();
   }
@@ -127,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    checkAppVersion(globalString.appVersion);
+    checkAppVersion(globalString.GlobalString.appVersion);
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.symmetric(horizontal: 22), //水平間距
@@ -199,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   _btnClick(String schoolID, String password) async {
-    DB.deleteRoom();
+    DB.deleteTableData();
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
@@ -207,7 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
     var userID = '';
     var userName = '';
     var userImageURL = '';
-    var url = '${globalString.ipMysql}/login';
+    var token = '';
+    var url = '${globalString.GlobalString.ipMysql}/login';
     print(url);
     var response =
         await http.post(url, body: {'account': schoolID, 'password': password});
@@ -221,18 +193,15 @@ class _HomeScreenState extends State<HomeScreen> {
       print('UserName:$userName');
       userImageURL = (res['res'][0]['UserImageURL']).toString();
       print('UserImageURL:$userImageURL');
+      token = (res['res'][0]['uuid']).toString();
+      print('toke:$token');
 
-      DB.insertUser(int.parse(userID), userName);
+//      globalString.GlobalString.setAccount(schoolIDController.text.trim());
+      globalString.GlobalString.account = schoolIDController.text.trim();
+      DB.insertUser(int.parse(userID), userName, userImageURL, token);
       DB.insertLocate(1, 'Login');
 
-      if (io.Platform.isIOS) {
-        var tokenURL = '${globalString.ipRedis}/saveToken';
-        var saveToken = await http
-            .post(tokenURL, body: {'UserID': userID, 'Token': _token});
-        print('SaveToken body:${saveToken.body}');
-      }
-
-      var roomURL = '${globalString.ipMysql}/getChatRoomList';
+      var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
       var chatRoom = await http
           .post(roomURL, body: {'UserName': userName, 'UserID': userID});
       print('Response body:${chatRoom.body}');
@@ -243,20 +212,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
       DB.insertRoom(_roomList, _maxSN);
       print('查詢結果：${await DB.chatRoom()}');
-
+      _sendClick = 0;
       showDialog(
           context: context,
           barrierDismissible: true,
           builder: (BuildContext context) {
             return CupertinoAlertDialog(
               content: Text(
-                '${globalString.eulaContent}',
+                '${globalString.GlobalString.eulaContent}',
                 textAlign: TextAlign.left,
                 style: TextStyle(color: Colors.black, fontSize: 18),
               ),
               title: Center(
                   child: Text(
-                '${globalString.eulaTitle}',
+                '${globalString.GlobalString.eulaTitle}',
                 style: TextStyle(
                     color: Colors.black,
                     fontSize: 18,
@@ -265,18 +234,30 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: <Widget>[
                 CupertinoButton(
                     onPressed: () {
-                      _sendClick = 0;
                       Navigator.of(context).pop();
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => IndexScreen(
-                                  userID: userID,
-                                  userName: userName,
-                                  userImageURL: userImageURL,
-                                  roomList: _roomList,
-                                  nameList: _nameList,
-                                  idList: _idList)));
+                      schoolIDController.clear();
+                      passwordController.clear();
+//                      globalString.GlobalString.setUserInfo(_roomList, _nameList, _idList, userID, userName, userImageURL);
+                      globalString.GlobalString.userRoomList = _roomList;
+                      globalString.GlobalString.userNameList = _nameList;
+                      globalString.GlobalString.userIDList = _idList;
+                      globalString.GlobalString.userID = userID;
+                      globalString.GlobalString.userName = userName;
+                      globalString.GlobalString.userImageURL = userImageURL;
+
+                      Navigator.of(context).pushNamedAndRemoveUntil("/index", ModalRoute.withName("/index"));
+//                      Navigator.push(context,MaterialPageRoute(builder: (context) => BottomNavigationController()));
+//                      Navigator.of(context).pop();
+//                      Navigator.push(
+//                          context,
+//                          MaterialPageRoute(
+//                              builder: (context) => IndexScreen(
+//                                  userID: userID,
+//                                  userName: userName,
+//                                  userImageURL: userImageURL,
+//                                  roomList: _roomList,
+//                                  nameList: _nameList,
+//                                  idList: _idList)));
                     },
                     child: Text(
                       '同意',
@@ -284,7 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     )),
                 CupertinoButton(
                     onPressed: () {
-                      _sendClick = 0;
                       Navigator.of(context).pop();
                     },
                     child: Text(
@@ -301,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (BuildContext context) {
             return CupertinoAlertDialog(
               content: Text(
-                '${globalString.contentErr}',
+                '${globalString.GlobalString.contentErr}',
                 style: TextStyle(
                     color: Colors.red,
                     fontSize: 18,
@@ -310,8 +290,8 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: <Widget>[
                 FlatButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
                       _sendClick = 0;
+                      Navigator.of(context).pop();
                     },
                     child: Text(
                       '確定',

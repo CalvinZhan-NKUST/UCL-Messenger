@@ -83,7 +83,7 @@ void longPolling(String roomNotify) {
   if (timeStart == false) {
     timeStart = true;
     Timer.periodic(period, (timer) async {
-      var url = '${globalString.ipRedis}/notify';
+      var url = '${globalString.GlobalString.ipRedis}/notify';
       var response = await http.post(url, body: {'RoomIDList': roomNotify});
       print('LongPolling response body:${response.body}');
       var tagObjsJson = jsonDecode(response.body)['res'] as List;
@@ -116,7 +116,7 @@ class CompareMaxSN {
 Future<void> getNewestMsg(String roomID, String msgID) async {
   int _sendID = int.parse(msgID) - 1;
   _notifyRoomID = roomID;
-  var url = '${globalString.ipRedis}/getMsg';
+  var url = '${globalString.GlobalString.ipRedis}/getMsg';
   var response = await http
       .post(url, body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': '1'});
   print('Response body in getNewMsg:${response.body}');

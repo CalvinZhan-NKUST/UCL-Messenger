@@ -39,6 +39,7 @@ dependencies:
   firebase_messaging: ^7.0.3
   flutter_email_sender: ^4.0.0
   path_provider: ^1.6.27
+  url_launcher: ^5.7.10
 
 dev_dependencies:
   flutter_test:
