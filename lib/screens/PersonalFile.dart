@@ -1,10 +1,12 @@
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter/material.dart';
+import 'package:flutter_msg/screens/Login.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/main.dart';
 import 'package:flutter_msg/ControllerAndroidService.dart' as serviceAndroid;
+import 'package:flutter_msg/LongPolling.dart' as longPolling;
 
 class PersonalPage extends StatelessWidget {
   @override
@@ -34,7 +36,7 @@ class PersonalPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${globalString.GlobalString.userName}',
+                    'Photo',
                     style: new TextStyle(
                         fontSize: 28, fontWeight: FontWeight.bold),
                   ),
@@ -47,7 +49,7 @@ class PersonalPage extends StatelessWidget {
                   Icon(Icons.account_box_rounded),
                   SizedBox(width: 10),
                   Text(
-                    '${globalString.GlobalString.account}',
+                    '${globalString.GlobalString.userName}',
                     style: new TextStyle(fontSize: 22),
                   )
                 ],
@@ -92,6 +94,7 @@ class PersonalPage extends StatelessWidget {
                 color: Colors.black,
                 onPressed: () async {
                   DB.deleteTableData();
+                  longPolling.shutDownLongPolling();
                   if (io.Platform.isIOS) {
                     var tokenURL =
                         '${globalString.GlobalString.ipRedis}/saveToken';
@@ -104,13 +107,7 @@ class PersonalPage extends StatelessWidget {
                   if (io.Platform.isAndroid){
                     serviceAndroid.stopService();
                   }
-                  Navigator.pop(context);
-//              final scaffold = Scaffold.of(context);
-//              scaffold.showSnackBar(SnackBar(
-//                content: Text("功能尚未開放"),
-//                action: SnackBarAction(
-//                    label: '確定', onPressed: scaffold.hideCurrentSnackBar),
-//              ));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) =>HomeScreen()));
                 },
                 shape: StadiumBorder(side: BorderSide()),
               )

@@ -33,14 +33,20 @@ var _sendIDList = new List();
 var _sendNameList = new List();
 var _text = new List();
 int _msgMaxSN = 0;
+int _paraSN = 0;
 int _newMsg = 0;
+int _msgStart = 0;
+
 String _pollingText = '';
 String _pollingName = '';
 String _reportRoomID = '';
 String _textInput = '';
+String _msgNew = '${globalString.GlobalString.ipRedis}/getMsg';
+String _msgHistory = '${globalString.GlobalString.ipMysql}/getHistoryMsg';
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
+  final ScrollController _scrollController = new ScrollController();
   Timer _timerForMsg;
 
   void setLocate(String room) {
@@ -61,12 +67,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _timerForMsg = Timer.periodic(Duration(seconds: 1), callback);
   }
 
-  Future<void> _checkMsg() async {
+  Future<void> _checkMsg(String msgUrl) async {
     print('checkMsg ${widget.roomID}');
-    var url = '${globalString.GlobalString.ipRedis}/getMsg';
-    var response = await http.post(url, body: {
+    print('MsgID:$_paraSN');
+    var response = await http.post(msgUrl, body: {
       'RoomID': widget.roomID,
-      'MsgID': _msgMaxSN.toString(),
+      'MsgID': _paraSN.toString(),
       'MsgPara': globalString.GlobalString.msgPara
     });
     print('Response body:${response.body}');
@@ -78,27 +84,75 @@ class _ChatScreenState extends State<ChatScreen> {
           tagObjsJson.map((tagJson) => Messenger.fromJson(tagJson)).toList();
       print(tagObjs);
 
-      for (int i = 0; i < _sendIDList.length; i++) {
+      int insertLocate = 0;
+      if (msgUrl.contains('getMsg')) {
+        insertLocate = 0;
+        _msgMaxSN = _paraSN;
+        print('MaxSN:$_msgMaxSN');
+      } else
+        insertLocate = _messages.length;
+
+      if (_msgMaxSN == _sendIDList.length -1)
+        _msgStart = _sendIDList.length - _paraSN + 1;
+      else if (_msgMaxSN < int.parse(globalString.GlobalString.msgPara))
+        _msgStart = 0;
+      else
+        _msgStart = _sendIDList.length - int.parse(globalString.GlobalString.msgPara);
+
+
+      for (int i = _msgStart; i < _sendIDList.length; i++) {
         setState(() {
           if (_sendIDList[i].toString() == widget.userID) {
-            _messages.insert(
-                0, MessageSend(text: _text[i], send: _sendNameList[i]));
+            _messages.insert(insertLocate,
+                MessageSend(text: _text[i], send: _sendNameList[i]));
           } else {
-            _messages.insert(
-                0, MessageReceive(text: _text[i], send: _sendNameList[i]));
+            _messages.insert(insertLocate,
+                MessageReceive(text: _text[i], send: _sendNameList[i]));
           }
         });
       }
+      print(_msgStart);
+      print(_sendIDList.length);
+      _msgStart += 10;
     }
   }
 
+  void scroller() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        print('pixels:${_scrollController.position.pixels}');
+        print('max:${_scrollController.position.maxScrollExtent}');
+        _paraSN = _paraSN - int.parse(globalString.GlobalString.msgPara);
+        if (_paraSN > 0) _checkMsg(_msgHistory);
+//        else if(_paraSN<0 && _paraSN!=0){
+//          _paraSN+=10;
+//          print('sendList Length:${_sendIDList.length}');
+//          print('ID:$_paraSN');
+//          setState(() {
+//            if (_sendIDList[_sendIDList.length-_paraSN].toString() == widget.userID) {
+//              _messages.insert(
+//                  _messages.length, MessageSend(text: _text[_text.length-_paraSN], send: _sendNameList[_sendNameList.length-_paraSN]));
+//            } else {
+//              _messages.insert(
+//                  _messages.length, MessageReceive(text: _text[_text.length-_paraSN], send: _sendNameList[_sendNameList.length-_paraSN]));
+//            }
+//          });
+//          _paraSN = 0;
+//        }
+      }
+    });
+  }
+
   Future<void> dispose() async {
+    _scrollController.dispose();
     setLocate('none');
     _messages.clear();
     _sendIDList.clear();
     _text.clear();
     _sendNameList.clear();
     _msgMaxSN = 0;
+    _msgStart = 0;
     _timerForMsg.cancel();
     print('ChatRoom dispose + ${_messages.length}');
     _chatController.dispose();
@@ -107,17 +161,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void initState() {
     super.initState();
+    scroller();
     setLocate(widget.roomID);
     _reportRoomID = widget.roomID;
     _messages.clear();
     _sendIDList.clear();
     _text.clear();
     _sendNameList.clear();
+    _msgStart = 0;
     _msgMaxSN = 0;
+    _paraSN = 0;
     getNewMsg();
     _chatController.clear();
     print('ChatRoom init');
-    _checkMsg();
+    _checkMsg(_msgNew);
   }
 
   @override
@@ -132,7 +189,10 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: ListView.builder(
                 padding: new EdgeInsets.all(15.0),
-                reverse: true, //加入reverse，讓它反轉
+                reverse: true,
+                //加入reverse，讓它反轉
+                controller: _scrollController,
+                physics: BouncingScrollPhysics(),
                 itemBuilder: (context, index) => _messages[index],
                 itemCount: _messages.length,
               ),
@@ -154,10 +214,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       icon: Icon(Icons.send),
                       onPressed: () {
                         _textInput = _chatController.text.trim();
-                        if (_textInput.isEmpty==false)
-                          {
-                            _submitText(_chatController.text.trim());
-                          }
+                        if (_textInput.isEmpty == false) {
+                          _submitText(_chatController.text.trim());
+                        }
                       },
                     ),
                   ],
@@ -173,7 +232,7 @@ class _ChatScreenState extends State<ChatScreen> {
 //            child: Text(text),
 //            alignment: Alignment.centerRight,
 //          ));
-      );
+          );
       _chatController.clear();
     });
     print(widget.roomID);
@@ -361,17 +420,17 @@ class Messenger {
   factory Messenger.fromJson(dynamic json) {
     return Messenger(
         json['MsgID'] as int,
-        json['SendUserID'] as String,
+        json['SendUserID'].toString() as String,
         json['SendName'] as String,
         json['ReceiveName'] as String,
-        json['ReceiveUserID'] as String,
+        json['ReceiveUserID'].toString() as String,
         json['MsgType'] as String,
         json['Text'] as String);
   }
 
   @override
   String toString() {
-    _msgMaxSN = msgID;
+    _paraSN = msgID;
     _sendIDList.add(sendUserID);
     _sendNameList.add(sendName);
     _text.add(text);
@@ -386,7 +445,7 @@ void setNewMsg(int getMsg, String name, String text) {
   _newMsg = getMsg;
 }
 
-void sendReport(String send, String text) async{
+void sendReport(String send, String text) async {
   final Email email = Email(
     body: 'RoomID:$_reportRoomID, Send:$send, Text:$text',
     subject: 'UCL Messenger Report Email',
@@ -396,4 +455,3 @@ void sendReport(String send, String text) async{
   await FlutterEmailSender.send(email);
   print('Email寄出');
 }
-

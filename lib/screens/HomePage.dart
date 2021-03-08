@@ -1,35 +1,30 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter/material.dart';
 import 'package:flutter_apns/flutter_apns.dart';
-import 'package:flutter_msg/screens/Index.dart';
+import 'package:flutter_msg/screens/BottomNavigation.dart';
 import 'package:flutter_msg/screens/Login.dart';
 import 'package:flutter_msg/storage.dart' as apnStorage;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class UserInfo{
-  static String userID = '';
-  static String uuid = '';
-}
-
-
 class _HomePageState extends State<HomePage> {
   Timer _timer;
-  int count = 1;
   String _token = '';
-
+  var dataBaseUserInfo = new List();
 
   final connector = createPushConnector();
 
-  Future<void> _register() async {
+  Future<void> _register(String userID) async {
     final connector = this.connector;
     connector.configure(
       onLaunch: (data) => onPush('onLaunch', data),
@@ -43,7 +38,7 @@ class _HomePageState extends State<HomePage> {
       if (io.Platform.isIOS) {
         var tokenURL = '${globalString.GlobalString.ipRedis}/saveToken';
         var saveToken = await http
-            .post(tokenURL, body: {'Token': _token});
+            .post(tokenURL, body: {'UserID': userID, 'Token': _token});
         print('SaveToken body:${saveToken.body}');
       }
     });
@@ -86,58 +81,107 @@ class _HomePageState extends State<HomePage> {
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
       onPush('onBackgroundMessage', data);
 
-  changeMenu() async {
-    var _duration = new Duration(seconds: 1);
-    new Timer(_duration, () {
-      _timer = new Timer.periodic(const Duration(seconds: 1), (timer) async {
-        if (UserInfo.userID!=null) {
-          Map<String, dynamic> res;
-          var _url = '${globalString.GlobalString.ipRedis}/keepLogin';
-          print('send uuid UserID:${UserInfo.userID}, Token:${UserInfo.uuid}');
-          var response = await http.post(
-              _url, body: {'UserID': UserInfo.userID, 'uuid': UserInfo.uuid});
-          print('Response body:${response.body}');
-          res = jsonDecode(response.body);
-          print(res['res']);
-          if (res['res'] != 'pass') {
-            navigationToLogin();
-          } else {
-            navigationToIndex();
-          }
-        }else{
-          navigationToLogin();
-        }
-      });
-      return _timer;
-    });
+  void getServerVersion() async {
+    String _checkUrl = '${globalString.GlobalString.ipMysql}/getVersionCode';
+    Map<String, dynamic> resVersion;
+
+    var responseVersion = await http.post(_checkUrl);
+    resVersion = jsonDecode(responseVersion.body);
+    print(
+        'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString
+            .appVersion}');
+    globalString.GlobalString.serverVersion = resVersion['NowVersion'];
+  }
+
+  void updateAppVersion() async {
+    showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (BuildContext context) {
+          return CupertinoAlertDialog(
+            content: Text(
+              '${globalString.GlobalString.versionErr}',
+              style: TextStyle(
+                  color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            actions: <Widget>[
+              FlatButton(
+                  onPressed: () async {
+                    if (io.Platform.isIOS) {
+                      await launch(globalString.GlobalString.iOSAppUrlLink);
+                    } else if (io.Platform.isAndroid) {
+                      await launch(globalString.GlobalString.androidAppUrlLink);
+                    }
+                  },
+                  child: Text(
+                    '更新',
+                    style: TextStyle(color: Colors.blue, fontSize: 18),
+                  )),
+            ],
+          );
+        });
+  }
+
+  void changeMenu() async {
+    if (dataBaseUserInfo.isEmpty) {
+      navigationToLogin();
+      print('直接登入');
+    } else {
+      var userInfo = dataBaseUserInfo[0];
+      print('有資料可以進行持續登入');
+      if (io.Platform.isIOS) {
+        _register(userInfo.userID.toString());
+      }
+      Map<String, dynamic> res;
+      var _url = '${globalString.GlobalString.ipRedis}/keepLogin';
+      print(
+          'send uuid UserID:${userInfo.userID.toString()}, Token:${userInfo.token}');
+      var response = await http.post(_url,
+          body: {'UserID': userInfo.userID.toString(), 'uuid': userInfo.token});
+      print('Response body:${response.body}');
+      res = jsonDecode(response.body);
+      print(res['res']);
+      if (res['res'] != 'pass')
+        navigationToLogin();
+      else
+        navigationToIndex();
+    }
+  }
+
+  void checkVersion() async{
+    await Future.delayed(Duration(seconds: 1));
+    if ((globalString.GlobalString.serverVersion) ==
+        (globalString.GlobalString.appVersion))
+      changeMenu();
+    else
+      updateAppVersion();
   }
 
   void navigationToLogin() {
-    _timer.cancel();
     Navigator.push(
         context, MaterialPageRoute(builder: (context) => HomeScreen()));
   }
 
   void navigationToIndex() {
-    _timer.cancel();
-    Navigator.push(
-        context, MaterialPageRoute(builder: (context) => IndexScreen()));
+    Navigator.push(context,
+        MaterialPageRoute(builder: (context) => BottomNavigationController()));
+  }
+
+  Future<void> getUserInfo() async {
+    dataBaseUserInfo = await DB.selectUser();
   }
 
   @override
   void initState() {
     DB.connectDB();
-    if (io.Platform.isIOS) {
-      _register();
-    }
-    print(UserInfo.userID);
-    print(UserInfo.uuid);
-    changeMenu();
+    getUserInfo();
+    getServerVersion();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    checkVersion();
     return Image.asset('assets/app_icon.png');
   }
 }

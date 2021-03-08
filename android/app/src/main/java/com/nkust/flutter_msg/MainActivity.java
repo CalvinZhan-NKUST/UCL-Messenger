@@ -16,7 +16,7 @@ import io.flutter.plugins.GeneratedPluginRegistrant;
 public class MainActivity extends FlutterActivity {
     private Intent serviceIntent;
     private Integer serviceStart = notifyUnit.serviceStart;
-    private Integer serviceStarted = 0;
+    public static Integer serviceStarted = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -48,31 +48,17 @@ public class MainActivity extends FlutterActivity {
                         }
                     }
                 });
-
-
-
-//        BasicMessageChannel messageChannel = new BasicMessageChannel<>(getFlutterEngine().
-//                getDartExecutor().
-//                getBinaryMessenger(),
-//                "sendUserID",
-//                StringCodec.INSTANCE);
-//        messageChannel.
-//                setMessageHandler(new BasicMessageChannel.MessageHandler<String>() {
-//                    @Override
-//                    public void onMessage(String s, BasicMessageChannel.Reply<String> reply) {
-////                        string setRoom = new string();
-////                        setRoom.setRoomList(s);
-//                        Log.d("Demo","GetRoomList:"+s);
-//                        reply.reply("getRoomList");
-//                    }
-//                });
                 }
     @Override
     protected void onDestroy() {
+        Log.d("Demo","Main Destroy");
         super.onDestroy();
     }
 
     private void stopService(){
+        if (serviceIntent==null){
+            serviceIntent = new Intent(MainActivity.this, notifyUnit.class);
+        }
         stopService(serviceIntent);
         serviceIntent = null;
     }

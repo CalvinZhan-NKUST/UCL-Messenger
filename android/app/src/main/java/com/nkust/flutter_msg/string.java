@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class string extends FlutterApplication {
-    String ipNotify = "https://chatapp.54ucl.com:4003";
+    String ipNotify = "https://chatapp.54ucl.com:4000";
     String roomList = "";
     Map<String, String> roomMsgSN = new HashMap<String, String>();
     Map<String, String> clientMsgSN = new HashMap<String, String>();

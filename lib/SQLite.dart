@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:flutter_msg/screens/HomePage.dart' as homePage;
+import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 //用於避免資料庫過於頻繁的開關
 int _notCloseToOften = 0;
@@ -95,16 +96,19 @@ Future<List<UserInfo>> selectUser() async{
 
 //存入聊天室清單
 Future<void> insertRoomList(List roomID, List userName, List userID) async{
+  globalString.GlobalString.userIDList=userID;
+  globalString.GlobalString.userRoomList=roomID;
+  globalString.GlobalString.userNameList=userName;
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
-    str += '(${roomID[i]}, ${userName[i]}), ${userID[i]}';
+    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}), ';
   }
   str = str.substring(0, str.length - 2);
   final database = openDatabase(
     join(await getDatabasesPath(), 'chatroom.db'),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList $str');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $str');
 }
 
 //取得聊天室列表
@@ -119,7 +123,7 @@ Future<List<RoomList>> selectRoomList() async{
     return RoomList(
       roomID: maps[i]['RoomID'],
       userID: maps[i]['UserID'],
-      userName: maps[i]['Name'],
+      userName: maps[i]['UserName'],
     );
   });
 }
@@ -155,6 +159,24 @@ Future<void> deleteTableData() async {
   db.execute('DELETE FROM locate;');
   db.execute('DELETE FROM user;');
   db.execute('DELETE FROM roomList;');
+  print('刪除資料表資料');
+  if (_notCloseToOften == 10) {
+    _notCloseToOften = 0;
+//    await db.close();
+  }
+}
+
+
+Future<void> dropTable() async {
+  _notCloseToOften++;
+  final database = openDatabase(
+    join(await getDatabasesPath(), 'chatroom.db'),
+  );
+  final Database db = await database;
+  db.execute('DROP TABLE roomsn;');
+  db.execute('DROP TABLE locate;');
+  db.execute('DROP TABLE user;');
+  db.execute('DROP TABLE roomList;');
   print('刪除資料表資料');
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -270,8 +292,10 @@ class UserInfo {
 
   @override
   String toString() {
-    homePage.UserInfo.userID = userID.toString();
-    homePage.UserInfo.uuid = token;
+    globalString.GlobalString.userID = userID.toString();
+    globalString.GlobalString.uuid = token;
+    globalString.GlobalString.userImageURL = userImageURL;
+    globalString.GlobalString.userName = userName;
     return '{UserID: $userID, UserName: $userName, UserImageURL: $userImageURL, Token: $token}';
   }
 }
@@ -295,4 +319,6 @@ class RoomList {
   String toString() {
     return '{RoomID: $roomID, UserID: $userID, UserName: $userName}';
   }
+
+
 }

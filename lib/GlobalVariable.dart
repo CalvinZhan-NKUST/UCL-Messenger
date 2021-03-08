@@ -7,7 +7,8 @@ class GlobalString {
   static String contentErr = '帳號或密碼錯誤\n請重新輸入';
   static String versionErr = '版本錯誤，請更新';
   static String msgPara = '';
-  static String appVersion = '1.1';
+  static String appVersion = '1.3';
+  static String serverVersion = '';
   static String iOSAppUrlLink =
       'https://apps.apple.com/us/app/ucl-messenger/id1547578801';
   static String androidAppUrlLink =
@@ -16,6 +17,7 @@ class GlobalString {
   static List userRoomList;
   static List userNameList;
   static List userIDList;
+  static String uuid = '';
   static String userID = '';
   static String userName = '';
   static String userImageURL = '';

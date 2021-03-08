@@ -12,10 +12,12 @@ import 'package:vibration/vibration.dart';
 
 
 var period = const Duration(seconds: 5);
-bool timeStart = false;
+bool timeStart;
 var clientRoomList = new List();
 int _times = 0;
+Timer _pollingTimer;
 Map<String, String> client = {};
+String _cancelTimer = '';
 String _userID = '';
 String _locateRoomID= '';
 String _notifyRoomID = '';
@@ -80,9 +82,11 @@ void setLocateRoomID(String roomID){
 }
 
 void longPolling(String roomNotify) {
+  print('進入長輪詢：$timeStart');
   if (timeStart == false) {
     timeStart = true;
-    Timer.periodic(period, (timer) async {
+    _cancelTimer = '';
+    _pollingTimer = new Timer.periodic(period, (Timer timer) async {
       var url = '${globalString.GlobalString.ipRedis}/notify';
       var response = await http.post(url, body: {'RoomIDList': roomNotify});
       print('LongPolling response body:${response.body}');
@@ -90,8 +94,20 @@ void longPolling(String roomNotify) {
       List<RoomMaxSN> tagObjs =
           tagObjsJson.map((tagJson) => RoomMaxSN.fromJson(tagJson)).toList();
       print(tagObjs);
+      if (_cancelTimer=='cancel'){
+        _pollingTimer.cancel();
+        _pollingTimer = null;
+        timeStart = false;
+      }
     });
   }
+}
+
+void shutDownLongPolling(){
+//  _pollingTimer.cancel();
+//  _pollingTimer = null;
+  timeStart = false;
+  _cancelTimer = 'cancel';
 }
 
 //比較每個Room的訊息編號
@@ -182,7 +198,6 @@ class RoomMaxSN {
   final String maxSN;
 
   RoomMaxSN(this.roomID, this.maxSN);
-
   factory RoomMaxSN.fromJson(dynamic json) {
     return RoomMaxSN(json['RoomID'] as String, json['MaxSN'] as String);
   }

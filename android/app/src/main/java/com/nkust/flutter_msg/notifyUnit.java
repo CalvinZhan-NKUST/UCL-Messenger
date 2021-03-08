@@ -105,6 +105,7 @@ public class notifyUnit extends Service {
         Log.d("Demo", "onStartCommand");
         Log.d("Demo", "serviceStart:" + serviceStart);
         Log.d("Demo", getIP + "/notify");
+        serviceStart = 0;
 
 
         timer.schedule(new TimerTask() {
@@ -167,6 +168,7 @@ public class notifyUnit extends Service {
                 });
             }
         }, 0, 5000);
+
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -327,5 +329,15 @@ public class notifyUnit extends Service {
     public IBinder onBind(Intent intent) {
         Log.d("Demo", "onBind");
         return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        timer.cancel();
+        timer = null;
+        serviceStart = 0;
+        MainActivity.serviceStarted = 0;
+        Log.d("Demo", "Service Destroy");
+        super.onDestroy();
     }
 }
