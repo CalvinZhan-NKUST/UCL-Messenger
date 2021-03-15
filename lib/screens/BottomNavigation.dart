@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_msg/screens/Index.dart';
 import 'package:flutter_msg/screens/PersonalFile.dart';
+import 'package:flutter_msg/screens/SearchAndNewChat.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 class BottomNavigationController extends StatefulWidget {
@@ -16,6 +17,7 @@ class _BottomNavigationControllerState
   int _currentNum = 0; //預設值
   final pages = [
     IndexScreen(),
+    SearchAndNewChat(),
     PersonalPage()
   ];
 
@@ -27,6 +29,8 @@ class _BottomNavigationControllerState
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_rounded), label: '聊天室清單'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_rounded), label: '搜尋好友&新增聊天室'),
           BottomNavigationBarItem(
               icon: Icon(Icons.account_box_rounded), label: '個人資料'),
         ],

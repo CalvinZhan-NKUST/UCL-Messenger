@@ -32,7 +32,6 @@ class _IndexScreenState extends State<IndexScreen> {
     DB.selectUser();
     DB.selectRoomList();
     print('userID:${globalString.GlobalString.userID}');
-    getMsgPara();
     print('Index init');
   }
 
@@ -75,6 +74,8 @@ class _IndexScreenState extends State<IndexScreen> {
     dataBaseUserInfo = await DB.selectUser();
     var userInfo = dataBaseUserInfo[0];
     globalString.GlobalString.userName = userInfo.userName;
+    globalString.GlobalString.userID = userInfo.userID.toString();
+    getMsgPara();
     setState(() {
       for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
         var room = dataBaseRoomList[i];
