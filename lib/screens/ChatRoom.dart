@@ -304,7 +304,7 @@ class MessageSend extends StatelessWidget {
             Flexible(
               child: Container(
                 margin: const EdgeInsets.only(right: 10),
-                color: Colors.blueAccent,
+                color: Color(0xff4682b4),
                 padding: EdgeInsets.all(10.0),
                 child: Text(text,
                     overflow: TextOverflow.ellipsis,
@@ -390,7 +390,7 @@ class MessageReceive extends StatelessWidget {
             Flexible(
               child: Container(
                 margin: EdgeInsets.only(left: 10),
-                color: Colors.red,
+                color: Color(0xff87cefa),
                 padding: EdgeInsets.all(10.0),
                 child: Text(text,
                     overflow: TextOverflow.ellipsis,

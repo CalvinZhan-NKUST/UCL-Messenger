@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_msg/screens/Index.dart';
 import 'package:flutter_msg/screens/PersonalFile.dart';
 import 'package:flutter_msg/screens/SearchAndNewChat.dart';
+import 'package:flutter_msg/screens/FriendList.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 class BottomNavigationController extends StatefulWidget {
@@ -18,6 +19,7 @@ class _BottomNavigationControllerState
   final pages = [
     IndexScreen(),
     SearchAndNewChat(),
+    FriendList(),
     PersonalPage()
   ];
 
@@ -25,17 +27,20 @@ class _BottomNavigationControllerState
   Widget build(BuildContext context) {
     return Scaffold(
       body: pages[_currentNum],
+      backgroundColor: Color(0xffd3d3d3),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_rounded), label: '聊天室清單'),
+              icon: Icon(Icons.chat_bubble_rounded, size: 36), label: ''),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_rounded), label: '搜尋好友&新增聊天室'),
+              icon: Icon(Icons.search, size: 36), label: ''),
           BottomNavigationBarItem(
-              icon: Icon(Icons.account_box_rounded), label: '個人資料'),
+              icon: Icon(Icons.people, size: 36), label: ''),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_box_rounded, size: 36), label: ''),
         ],
         currentIndex: _currentNum, //目前選擇頁索引值
-        fixedColor: Colors.amber, //選擇頁顏色
+        fixedColor: Color(0xff4682b4), //選擇頁顏色
         onTap: _onItemClick, //BottomNavigationBar 按下處理事件
       ),
     );

@@ -105,7 +105,7 @@ class _IndexScreenState extends State<IndexScreen> {
     return WillPopScope(
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xfff5f5f5),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(15.0),
             topRight: Radius.circular(15.0),
@@ -159,27 +159,37 @@ class RecentChat extends StatelessWidget {
                     )));
       },
       child: Container(
-        margin: EdgeInsets.all(10),
+        margin: EdgeInsets.all(5),
         child: ClipRRect(
           borderRadius: BorderRadius.only(
-            bottomRight: Radius.circular(20.0),
-            topRight: Radius.circular(20.0),
+            bottomRight: Radius.circular(10.0),
+            topRight: Radius.circular(10.0),
+            topLeft: Radius.circular(10.0),
+            bottomLeft: Radius.circular(10.0),
           ),
           child: Container(
             width: MediaQuery.of(context).size.width * 0.45,
             padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
-            color: Colors.blueAccent,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue, Colors.grey]
+              )
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
+                Container(
+                  child: Text(''),
+                ),
                 CircleAvatar(
-                  radius: 30,
+                  radius: 25,
                   backgroundImage: AssetImage('assets/005.png'),
                 ),
+                SizedBox(width: 10),
                 Container(
                   child: Text(friendName,
                       style: TextStyle(
-                          fontSize: 32.0,
+                          fontSize: 28.0,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.none)),

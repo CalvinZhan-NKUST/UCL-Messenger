@@ -15,9 +15,6 @@ class GlobalString {
       'https://play.google.com/store/apps/details?id=com.nkust.flutter_msg';
   static final String searchUser = '搜尋其他使用者';
 
-  static List userRoomList;
-  static List userNameList;
-  static List userIDList;
   static String uuid = '';
   static String userID = '';
   static String userName = '';

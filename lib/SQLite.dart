@@ -96,14 +96,22 @@ Future<List<UserInfo>> selectUser() async{
 
 //存入聊天室清單
 Future<void> insertRoomList(List roomID, List userName, List userID) async{
-  globalString.GlobalString.userIDList=userID;
-  globalString.GlobalString.userRoomList=roomID;
-  globalString.GlobalString.userNameList=userName;
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
     str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}), ';
   }
   str = str.substring(0, str.length - 2);
+  final database = openDatabase(
+    join(await getDatabasesPath(), 'chatroom.db'),
+  );
+  final Database db = await database;
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $str');
+}
+
+//存入單一聊天室
+Future<void> insertSingleRoom(String roomID, String userName, String userID) async{
+  String str = 'VALUES ';
+  str += '($roomID, \'$userName\', $userID)';
   final database = openDatabase(
     join(await getDatabasesPath(), 'chatroom.db'),
   );
@@ -319,6 +327,4 @@ class RoomList {
   String toString() {
     return '{RoomID: $roomID, UserID: $userID, UserName: $userName}';
   }
-
-
 }
