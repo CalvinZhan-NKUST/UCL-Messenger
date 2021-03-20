@@ -61,9 +61,6 @@ class _IndexScreenState extends State<IndexScreen> {
   }
 
   Future<void> makeFriendChatList() async {
-//    widget.friendList.insert(0,'value'); 未來可以新增至第一位
-//    widget.nameList.reversed 反過來
-
     var dataBaseRoomList = new List();
     var dataBaseUserInfo = new List();
     var pollingRoomList = new List();
@@ -92,8 +89,8 @@ class _IndexScreenState extends State<IndexScreen> {
       }
     });
 
-    polling.setRoomList(pollingRoomList);
-    polling.setUserID(userInfo.userID.toString());
+//    polling.setRoomList(pollingRoomList);
+//    polling.setUserID(userInfo.userID.toString());
     if (io.Platform.isAndroid) {
       serviceAndroid.runService();
     }

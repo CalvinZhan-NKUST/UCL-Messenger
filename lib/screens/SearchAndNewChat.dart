@@ -13,8 +13,8 @@ class SearchAndNewChat extends StatefulWidget {
 }
 
 final List<Widget> _friends = []; // 建立一個空陣列
-var dataBaseRoomList = new List();
-var dataBaseUserInfo = new List();
+var _dataBaseRoomList = new List();
+var _dataBaseUserInfo = new List();
 
 @override
 class _SearchAndNewChat extends State<SearchAndNewChat> {
@@ -22,8 +22,8 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
   String _textInput = '';
 
   void getDataBaseInfo() async {
-    dataBaseUserInfo = await DB.selectUser();
-    dataBaseRoomList = await DB.selectRoomList();
+    _dataBaseUserInfo = await DB.selectUser();
+    _dataBaseRoomList = await DB.selectRoomList();
   }
 
   void initState() {
@@ -73,6 +73,7 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
                         _textInput = _searchController.text.trim();
                         if (_textInput.isEmpty == false) {
                           _submitText(_searchController.text.trim());
+                          _searchController.clear();
                         }
                       },
                     ),
@@ -103,7 +104,7 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
     setState(() {
       _friends.clear();
     });
-    var userInfo = dataBaseUserInfo[0];
+    var userInfo = _dataBaseUserInfo[0];
     String url = '${globalString.GlobalString.ipMysql}/searchUser';
     var response = await http.post(url,
         body: {'searchValue': inputText, 'UserID': userInfo.userID.toString()});
@@ -193,12 +194,12 @@ class FriendSearchList extends StatelessWidget {
 
   void _clickAdd(String userName, String userID, BuildContext context) async{
     final scaffold = Scaffold.of(context);
-    var userInfo = dataBaseUserInfo[0];
+    var userInfo = _dataBaseUserInfo[0];
     int _roomExist = 0;
-    for (int i = 0; i < dataBaseRoomList.length; i++) {
-      if (userID == (dataBaseRoomList[i].userID).toString()) {
+    for (int i = 0; i < _dataBaseRoomList.length; i++) {
+      if (userID == (_dataBaseRoomList[i].userID).toString()) {
         _roomExist=1;
-        print('$userID, ${dataBaseRoomList[i].userID}');
+        print('$userID, ${_dataBaseRoomList[i].userID}');
         scaffold.showSnackBar(SnackBar(
           content: Text("聊天室已存在"),
           action: SnackBarAction(

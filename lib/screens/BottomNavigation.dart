@@ -27,7 +27,6 @@ class _BottomNavigationControllerState
   Widget build(BuildContext context) {
     return Scaffold(
       body: pages[_currentNum],
-      backgroundColor: Color(0xffd3d3d3),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -39,8 +38,9 @@ class _BottomNavigationControllerState
           BottomNavigationBarItem(
               icon: Icon(Icons.account_box_rounded, size: 36), label: ''),
         ],
+        unselectedItemColor: Color(0xffc0c0c0),
         currentIndex: _currentNum, //目前選擇頁索引值
-        fixedColor: Color(0xff4682b4), //選擇頁顏色
+        selectedItemColor: Color(0xff4682b4), //選擇頁顏色
         onTap: _onItemClick, //BottomNavigationBar 按下處理事件
       ),
     );

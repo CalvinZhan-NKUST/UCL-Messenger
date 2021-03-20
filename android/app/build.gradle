@@ -41,7 +41,7 @@ android {
         applicationId "com.nkust.flutter_msg"
         minSdkVersion 23
         targetSdkVersion 29
-        versionCode 8
+        versionCode 9
         versionName "1.0"
     }
 
@@ -67,7 +67,15 @@ flutter {
     source '../..'
 }
 
+repositories {
+    maven {
+        url "https://repo.eclipse.org/content/repositories/paho-releases/"
+    }
+}
+
 dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.4.0'
     implementation 'com.google.code.gson:gson:2.8.6'
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
+    implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.0'
 }

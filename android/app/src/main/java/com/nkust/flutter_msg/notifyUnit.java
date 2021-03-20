@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -24,6 +25,14 @@ import androidx.core.app.NotificationCompat;
 
 import com.google.gson.Gson;
 
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -54,6 +63,15 @@ public class notifyUnit extends Service {
     public static Integer serviceStart = 0;
     private int setClientCount = 0;
     private Map<String, String> clientMsgSN = new HashMap<String, String>();
+    private static MqttAndroidClient client;
+    private MqttConnectOptions conOpt;
+
+    //    private String host = "tcp://10.0.2.2:61613";
+    private String host = "tcp://chatapp.54ucl.com:1883";
+    private String userName = "yoChiMQTT";
+    private String passWord = "C217_mia";
+    private String clientID = "";
+
 
     @Override
     public void onCreate() {
@@ -68,6 +86,15 @@ public class notifyUnit extends Service {
             roomList += roomID + ",";
         }
         cursor.close();
+
+        SQLiteDatabase sqLiteDataBase = openOrCreateDatabase("chatroom.db", MODE_PRIVATE, null);
+        Cursor cursorDB = sqLiteDataBase.rawQuery("SELECT * FROM user", null);
+        while (cursorDB.moveToNext()) {
+            String userID = cursorDB.getString((cursorDB.getColumnIndex("UserID")));
+            clientID = "User_"+userID;
+            Log.d("MQTT", "Service 查詢結果：" + " UserID=" + clientID);
+        }
+        cursorDB.close();
 
 
         Log.d("Demo", "onCreate");
@@ -95,6 +122,8 @@ public class notifyUnit extends Service {
             startForeground(102, builder.build());
             Log.d("Demo", "serviceStart:" + serviceStart);
         }
+
+        mqttInit();
     }
 
 
@@ -172,15 +201,105 @@ public class notifyUnit extends Service {
         return super.onStartCommand(intent, flags, startId);
     }
 
+    public void mqttInit(){
+        Context context = this;
+        String uri = host;
+        client = new MqttAndroidClient(context, uri, clientID);
+        client.setCallback(mqttCallback);
+        conOpt = new MqttConnectOptions();
+        conOpt.setCleanSession(true);
+        conOpt.setConnectionTimeout(10);
+        conOpt.setKeepAliveInterval(30);
+        conOpt.setUserName(userName);
+        conOpt.setPassword(passWord.toCharArray());
+
+        boolean doConnect = true;
+        String message = "{\"terminal_uid\":\"" + clientID + "\"}";
+        String topic = "2";
+        Integer qos = 1;
+        Boolean retained = false;
+        if ((!message.equals("")) || (!topic.equals(""))) {
+            try {
+                conOpt.setWill(topic, message.getBytes(), qos.intValue(), retained.booleanValue());
+            } catch (Exception e) {
+                Log.d("MQTT", "Exception Occurred", e);
+                doConnect = false;
+                iMqttActionListener.onFailure(null, e);
+            }
+        }
+
+        if (doConnect) {
+            doClientConnection();
+        }
+    }
+
+    private void doClientConnection() {
+        if (!client.isConnected()) {
+            try {
+                client.connect(conOpt, null, iMqttActionListener);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    // MQTT是否连接成功
+    private IMqttActionListener iMqttActionListener = new IMqttActionListener() {
+        @Override
+        public void onSuccess(IMqttToken arg0) {
+            try {
+                client.subscribe(clientID+"/+",0);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+            Log.d("MQTT", "連接成功 ");
+        }
+
+        @Override
+        public void onFailure(IMqttToken arg0, Throwable arg1) {
+            arg1.printStackTrace();
+        }
+    };
+
+    // MQTT监听并且接受消息
+    private MqttCallback mqttCallback = new MqttCallback() {
+        @Override
+        public void messageArrived(String topic, MqttMessage message) throws Exception {
+            String str1 = new String(message.getPayload());
+            JSONObject jsonMQTTObj = new JSONObject(str1);
+            String sendName = jsonMQTTObj.getString("SendName");
+            String content = jsonMQTTObj.getString("Text");
+            String roomID = jsonMQTTObj.getString("RoomID");
+            String maxSN = jsonMQTTObj.getString("MaxSN");
+
+            notification(sendName,content);
+            updateClientSN(Integer.parseInt(roomID),Integer.parseInt(maxSN));
+            saveMaxSN(Integer.parseInt(roomID),Integer.parseInt(maxSN));
+        }
+
+        @Override
+        public void deliveryComplete(IMqttDeliveryToken arg0) {
+            Log.d("MQTT","Delivery Complete:"+arg0.toString());
+        }
+
+        @Override
+        public void connectionLost(Throwable arg0) {
+            Log.d("MQTT","Connection Lost:"+arg0.toString());
+            mqttInit();
+        }
+    };
+
+
     public void notification(String userName, String text) {
         Context context = this;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Intent intent = new Intent(context, MainActivity.class);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, 15, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 15, intent, PendingIntent.FLAG_CANCEL_CURRENT);
 
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             NotificationChannel channel = null;
-            channel = new NotificationChannel("notification", "高科大推播系統", NotificationManager.IMPORTANCE_DEFAULT);
+            channel = new NotificationChannel("notification", "高科大推播系統", NotificationManager.IMPORTANCE_HIGH);
             notificationManager.createNotificationChannel(channel);
 
             channel.canBypassDnd();
@@ -192,7 +311,7 @@ public class notifyUnit extends Service {
                     new NotificationCompat.Builder(context, "notification")
                             .setContentTitle(userName)
                             .setContentText(text)
-                            .setAutoCancel(false)
+                            .setAutoCancel(true)
                             .setCategory(Notification.CATEGORY_SERVICE)
                             .setOngoing(false)
                             .setSmallIcon(R.drawable.nkust)
@@ -338,6 +457,12 @@ public class notifyUnit extends Service {
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
+        stopSelf();
+        try {
+            client.disconnect();
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
         super.onDestroy();
     }
 }

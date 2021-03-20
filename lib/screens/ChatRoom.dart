@@ -29,20 +29,19 @@ class ChatScreen extends StatefulWidget {
 
 final List<Widget> _messages = []; // 建立一個空陣列
 Map<String, dynamic> res;
-var _sendIDList = new List();
-var _sendNameList = new List();
-var _text = new List();
-int _msgMaxSN = 0;
-int _paraSN = 0;
-int _newMsg = 0;
-int _msgStart = 0;
+Map<String, dynamic> historyMsg;
 
+int _newMsg = 0;
+int _nextSN = 0;
+
+String _getHistoryMsgSN = '';
 String _pollingText = '';
 String _pollingName = '';
 String _reportRoomID = '';
 String _textInput = '';
 String _msgNew = '${globalString.GlobalString.ipRedis}/getMsg';
 String _msgHistory = '${globalString.GlobalString.ipMysql}/getHistoryMsg';
+
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
@@ -53,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
     polling.setLocateRoomID(room);
   }
 
-  void getNewMsg() {
+  void getNewMsgFromPolling() {
     var callback = (timer) => {
           if (_newMsg != 0)
             {
@@ -69,10 +68,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _checkMsg(String msgUrl) async {
     print('checkMsg ${widget.roomID}');
-    print('MsgID:$_paraSN');
     var response = await http.post(msgUrl, body: {
       'RoomID': widget.roomID,
-      'MsgID': _paraSN.toString(),
+      'MsgID': '0',
       'MsgPara': globalString.GlobalString.msgPara
     });
     print('Response body:${response.body}');
@@ -82,64 +80,69 @@ class _ChatScreenState extends State<ChatScreen> {
       var tagObjsJson = jsonDecode(response.body)['res'] as List;
       List<Messenger> tagObjs =
           tagObjsJson.map((tagJson) => Messenger.fromJson(tagJson)).toList();
-      print(tagObjs);
-
-      int insertLocate = 0;
-      if (msgUrl.contains('getMsg')) {
-        insertLocate = 0;
-        _msgMaxSN = _paraSN;
-        print('MaxSN:$_msgMaxSN');
-      } else
-        insertLocate = _messages.length;
-
-      if (_msgMaxSN == _sendIDList.length -1)
-        _msgStart = _sendIDList.length - _paraSN + 1;
-      else if (_msgMaxSN < int.parse(globalString.GlobalString.msgPara))
-        _msgStart = 0;
-      else
-        _msgStart = _sendIDList.length - int.parse(globalString.GlobalString.msgPara);
-
-
-      for (int i = _msgStart; i < _sendIDList.length; i++) {
-        setState(() {
-          if (_sendIDList[i].toString() == widget.userID) {
-            _messages.insert(insertLocate,
-                MessageSend(text: _text[i], send: _sendNameList[i]));
-          } else {
-            _messages.insert(insertLocate,
-                MessageReceive(text: _text[i], send: _sendNameList[i]));
-          }
-        });
-      }
-      print(_msgStart);
-      print(_sendIDList.length);
-      _msgStart += 10;
+      setMessage(tagObjs);
     }
+  }
+
+  void setMessage(List<Messenger> setNewMessage) {
+    for (int i = (setNewMessage.length - 1); i >= 0; i--) {
+      print(i);
+      setState(() {
+        if (setNewMessage[i].sendUserID.toString() == widget.userID) {
+          _messages.insert(
+              0,
+              MessageSend(
+                  text: setNewMessage[i].text,
+                  send: setNewMessage[i].sendName));
+        } else {
+          _messages.insert(
+              0,
+              MessageReceive(
+                  text: setNewMessage[i].text,
+                  send: setNewMessage[i].sendName));
+        }
+      });
+    }
+    if (_messages.length < 10) {
+      _getHistoryMsgSN = (int.parse(setNewMessage[(setNewMessage.length - 1)].msgID) -1).toString();
+      print('NewMsgSN:'+_getHistoryMsgSN);
+      setHistoryMessage(_getHistoryMsgSN);
+    }
+  }
+
+  void setHistoryMessage(String msgSN) async {
+    _nextSN = int.parse(msgSN) - 10;
+    var response = await http
+        .post(_msgHistory, body: {'MsgID': msgSN, 'RoomID': widget.roomID});
+    historyMsg = jsonDecode(response.body);
+    var hisMsgJson = jsonDecode(response.body)['res'] as List;
+    List<Messenger> hisObjs =
+        hisMsgJson.map((tagJson) => Messenger.fromJson(tagJson)).toList();
+
+    print(hisObjs);
+    for (int i = (hisObjs.length-1); i >= 0; i--) {
+      int insertPosition = _messages.length;
+      setState(() {
+        if (hisObjs[i].sendUserID.toString() == widget.userID) {
+          _messages.insert(insertPosition,
+              MessageSend(text: hisObjs[i].text, send: hisObjs[i].sendName));
+        } else {
+          _messages.insert(insertPosition,
+              MessageReceive(text: hisObjs[i].text, send: hisObjs[i].sendName));
+        }
+      });
+    }
+
+    _getHistoryMsgSN = (int.parse(hisObjs[0].msgID)-1).toString();
+    print('HistoryMsgSN:'+_getHistoryMsgSN);
+
   }
 
   void scroller() {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
-        print('pixels:${_scrollController.position.pixels}');
-        print('max:${_scrollController.position.maxScrollExtent}');
-        _paraSN = _paraSN - int.parse(globalString.GlobalString.msgPara);
-        if (_paraSN > 0) _checkMsg(_msgHistory);
-//        else if(_paraSN<0 && _paraSN!=0){
-//          _paraSN+=10;
-//          print('sendList Length:${_sendIDList.length}');
-//          print('ID:$_paraSN');
-//          setState(() {
-//            if (_sendIDList[_sendIDList.length-_paraSN].toString() == widget.userID) {
-//              _messages.insert(
-//                  _messages.length, MessageSend(text: _text[_text.length-_paraSN], send: _sendNameList[_sendNameList.length-_paraSN]));
-//            } else {
-//              _messages.insert(
-//                  _messages.length, MessageReceive(text: _text[_text.length-_paraSN], send: _sendNameList[_sendNameList.length-_paraSN]));
-//            }
-//          });
-//          _paraSN = 0;
-//        }
+          _scrollController.position.maxScrollExtent && _nextSN>0) {
+        setHistoryMessage(_getHistoryMsgSN);
       }
     });
   }
@@ -148,11 +151,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     setLocate('none');
     _messages.clear();
-    _sendIDList.clear();
-    _text.clear();
-    _sendNameList.clear();
-    _msgMaxSN = 0;
-    _msgStart = 0;
     _timerForMsg.cancel();
     print('ChatRoom dispose + ${_messages.length}');
     _chatController.dispose();
@@ -165,13 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setLocate(widget.roomID);
     _reportRoomID = widget.roomID;
     _messages.clear();
-    _sendIDList.clear();
-    _text.clear();
-    _sendNameList.clear();
-    _msgStart = 0;
-    _msgMaxSN = 0;
-    _paraSN = 0;
-    getNewMsg();
+    getNewMsgFromPolling();
     _chatController.clear();
     print('ChatRoom init');
     _checkMsg(_msgNew);
@@ -182,6 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.friendName),
+          backgroundColor: Color(0xff4682b4),
         ),
         body: Center(
             child: Column(
@@ -302,20 +295,25 @@ class MessageSend extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
             Flexible(
-              child: Container(
-                margin: const EdgeInsets.only(right: 10),
-                color: Color(0xff4682b4),
-                padding: EdgeInsets.all(10.0),
-                child: Text(text,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 5,
-                    style: TextStyle(fontSize: 18.0, color: Colors.white)),
-              ),
+              child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(10.0),
+                    bottomLeft: Radius.circular(10.0),
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 10),
+                    color: Color(0xff4682b4),
+                    padding: EdgeInsets.all(10.0),
+                    child: Text(text,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 5,
+                        style: TextStyle(fontSize: 18.0, color: Colors.white)),
+                  )),
             ),
             Column(
               children: [
                 CircleAvatar(
-                  radius: 30,
+                  radius: 25,
                   backgroundImage: AssetImage('assets/005.png'),
                 ),
                 Text(send, key: anchorKey)
@@ -378,7 +376,7 @@ class MessageReceive extends StatelessWidget {
             Column(
               children: [
                 CircleAvatar(
-                  radius: 30,
+                  radius: 25,
                   backgroundImage: AssetImage('assets/005.png'),
                 ),
                 Text(
@@ -388,15 +386,20 @@ class MessageReceive extends StatelessWidget {
               ],
             ),
             Flexible(
-              child: Container(
-                margin: EdgeInsets.only(left: 10),
-                color: Color(0xff87cefa),
-                padding: EdgeInsets.all(10.0),
-                child: Text(text,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 5,
-                    style: TextStyle(fontSize: 18.0, color: Colors.white)),
-              ),
+              child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    bottomRight: Radius.circular(10.0),
+                    topRight: Radius.circular(10.0),
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.only(left: 10),
+                    color: Color(0xff00bfff),
+                    padding: EdgeInsets.all(10.0),
+                    child: Text(text,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 5,
+                        style: TextStyle(fontSize: 18.0, color: Colors.white)),
+                  )),
             ),
           ],
         ),
@@ -406,7 +409,7 @@ class MessageReceive extends StatelessWidget {
 }
 
 class Messenger {
-  int msgID;
+  String msgID;
   String sendUserID;
   String msgType;
   String receiveUserID;
@@ -419,21 +422,17 @@ class Messenger {
 
   factory Messenger.fromJson(dynamic json) {
     return Messenger(
-        json['MsgID'] as int,
+        json['MsgID'].toString() as String,
         json['SendUserID'].toString() as String,
         json['SendName'] as String,
         json['ReceiveName'] as String,
         json['ReceiveUserID'].toString() as String,
         json['MsgType'] as String,
-        json['Text'] as String);
+        json['Text'].toString() as String);
   }
 
   @override
   String toString() {
-    _paraSN = msgID;
-    _sendIDList.add(sendUserID);
-    _sendNameList.add(sendName);
-    _text.add(text);
     return '{ ${this.msgID}, ${this.sendUserID}, ${this.sendName}, '
         '${this.receiveName}, ${this.receiveUserID}, ${this.msgType}, ${this.text} }';
   }
