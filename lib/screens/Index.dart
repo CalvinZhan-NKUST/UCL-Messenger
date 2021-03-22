@@ -89,8 +89,8 @@ class _IndexScreenState extends State<IndexScreen> {
       }
     });
 
-//    polling.setRoomList(pollingRoomList);
-//    polling.setUserID(userInfo.userID.toString());
+    polling.setRoomList(pollingRoomList);
+    polling.setUserID(userInfo.userID.toString());
     if (io.Platform.isAndroid) {
       serviceAndroid.runService();
     }

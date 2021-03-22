@@ -103,8 +103,11 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       });
     }
+
+    _nextSN = int.parse(setNewMessage[setNewMessage.length-1].msgID);
+    _getHistoryMsgSN = (int.parse(setNewMessage[(setNewMessage.length - 1)].msgID) -1).toString();
+
     if (_messages.length < 10) {
-      _getHistoryMsgSN = (int.parse(setNewMessage[(setNewMessage.length - 1)].msgID) -1).toString();
       print('NewMsgSN:'+_getHistoryMsgSN);
       setHistoryMessage(_getHistoryMsgSN);
     }
@@ -142,6 +145,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent && _nextSN>0) {
+        print(_scrollController.position.pixels.toString());
+        print(_scrollController.position.maxScrollExtent.toString());
         setHistoryMessage(_getHistoryMsgSN);
       }
     });
@@ -151,6 +156,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     setLocate('none');
     _messages.clear();
+    _newMsg = 0;
+    _nextSN = 0;
+    _getHistoryMsgSN = '';
+    _pollingText = '';
+    _pollingName = '';
+    _textInput = '';
     _timerForMsg.cancel();
     print('ChatRoom dispose + ${_messages.length}');
     _chatController.dispose();
@@ -166,6 +177,12 @@ class _ChatScreenState extends State<ChatScreen> {
     getNewMsgFromPolling();
     _chatController.clear();
     print('ChatRoom init');
+    _newMsg = 0;
+    _nextSN = 0;
+    _getHistoryMsgSN = '';
+    _pollingText = '';
+    _pollingName = '';
+    _textInput = '';
     _checkMsg(_msgNew);
   }
 
