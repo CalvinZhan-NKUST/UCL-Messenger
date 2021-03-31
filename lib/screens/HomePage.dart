@@ -11,6 +11,7 @@ import 'package:flutter_msg/storage.dart' as apnStorage;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_msg/screens/CameraView.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -91,6 +92,7 @@ class _HomePageState extends State<HomePage> {
         'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString
             .appVersion}');
     globalString.GlobalString.serverVersion = resVersion['NowVersion'];
+    checkVersion();
   }
 
   void updateAppVersion() async {
@@ -105,8 +107,10 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             actions: <Widget>[
-              FlatButton(
+              TextButton(
                   onPressed: () async {
+//                    Navigator.push(
+//                        context, MaterialPageRoute(builder: (context) => TakePictureScreen()));
                     if (io.Platform.isIOS) {
                       await launch(globalString.GlobalString.iOSAppUrlLink);
                     } else if (io.Platform.isAndroid) {
@@ -149,7 +153,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void checkVersion() async{
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(Duration(seconds: 2));
+    print('伺服器版號：${globalString.GlobalString.serverVersion}');
     if ((globalString.GlobalString.serverVersion) ==
         (globalString.GlobalString.appVersion))
       changeMenu();
@@ -181,7 +186,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    checkVersion();
     return Image.asset('assets/app_icon.png');
   }
 }

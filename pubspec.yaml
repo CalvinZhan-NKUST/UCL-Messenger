@@ -40,6 +40,10 @@ dependencies:
   flutter_email_sender: ^4.0.0
   path_provider: ^1.6.27
   url_launcher: ^5.7.10
+  flutter_better_camera: ^0.6.1
+  video_player: ^2.1.0
+  photo_view: ^0.11.1
+
 
 dev_dependencies:
   flutter_test:

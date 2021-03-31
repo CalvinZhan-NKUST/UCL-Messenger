@@ -6,7 +6,6 @@ import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:flutter_msg/SQLite.dart' as DB;
 
 class ChatScreen extends StatefulWidget {
   ChatScreen(
@@ -211,6 +210,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 margin: const EdgeInsets.only(bottom: 16.0, left: 4.0),
                 child: Row(
                   children: <Widget>[
+                    IconButton(
+                      icon: Icon(Icons.photo_camera),
+                      onPressed: (){
+//                        Navigator.push(
+//                            context, MaterialPageRoute(builder: (context) => TakePictureScreen()));
+                      },
+                    ),
                     Flexible(
                       child: TextField(
                         controller: _chatController,
@@ -231,6 +237,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ],
                 )),
+            SizedBox(height: 5),
           ],
         )));
   }
