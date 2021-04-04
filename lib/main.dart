@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         primaryColor: Colors.blueAccent,
         accentColor: Color(0xFFFFFFFF),
       ),
-      home: HomePage(),
+      home: CameraApp(),
     );
   }
 }

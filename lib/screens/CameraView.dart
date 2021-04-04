@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter_better_camera/camera.dart';
+import 'package:camera/camera.dart';
+import 'package:ext_storage/ext_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -38,17 +39,29 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   VideoPlayerController videoController;
   VoidCallback videoPlayerListener;
   bool enableAudio = true;
-  FlashMode flashMode = FlashMode.off;
 
   Future<void> permissionRequest() async {
     Map<Permission, PermissionStatus> status =
-    await [Permission.notification, Permission.microphone, Permission.camera, Permission.storage].request();
+    await [Permission.notification, Permission.camera, Permission.storage, Permission.microphone].request();
+  }
+
+  List<CameraDescription> cameras = [];
+  Future<void> getCameraList() async {
+    // Fetch the available cameras before initializing the app.
+    try {
+      WidgetsFlutterBinding.ensureInitialized();
+      cameras = await availableCameras();
+    } on CameraException catch (e) {
+      logError(e.code, e.description);
+    }
+    runApp(CameraApp());
   }
 
   @override
   void initState() {
     super.initState();
     permissionRequest();
+    getCameraList();
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -79,9 +92,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: const Text('Camera example'),
-      ),
       body: Column(
         children: <Widget>[
           Expanded(
@@ -89,17 +99,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               child: Padding(
                 padding: const EdgeInsets.all(1.0),
                 child: Center(
-                    child: ZoomableWidget(
-                        child: _cameraPreviewWidget(),
-                        onTapUp: (scaledPoint) {
-                          //controller.setPointOfInterest(scaledPoint);
-                        },
-                        onZoom: (zoom) {
-                          print('zoom');
-                          if (zoom < 11) {
-                            controller.zoom(zoom);
-                          }
-                        })),
+                  child: _cameraPreviewWidget(),
+                ),
               ),
               decoration: BoxDecoration(
                 color: Colors.black,
@@ -241,16 +242,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               : null,
         ),
         IconButton(
-          icon: controller != null && controller.value.autoFocusEnabled
-              ? Icon(Icons.access_alarm)
-              : Icon(Icons.access_alarms),
-          color: Colors.blue,
-          onPressed: (controller != null && controller.value.isInitialized)
-              ? toogleAutoFocus
-              : null,
-        ),
-        _flashButton(),
-        IconButton(
           icon: const Icon(Icons.stop),
           color: Colors.red,
           onPressed: controller != null &&
@@ -258,49 +249,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               controller.value.isRecordingVideo
               ? onStopButtonPressed
               : null,
-        ),
+        )
       ],
     );
-  }
-
-  /// Flash Toggle Button
-  Widget _flashButton() {
-    IconData iconData = Icons.flash_off;
-    Color color = Colors.black;
-    if (flashMode == FlashMode.alwaysFlash) {
-      iconData = Icons.flash_on;
-      color = Colors.blue;
-    } else if (flashMode == FlashMode.autoFlash) {
-      iconData = Icons.flash_auto;
-      color = Colors.red;
-    }
-    return IconButton(
-      icon: Icon(iconData),
-      color: color,
-      onPressed: controller != null && controller.value.isInitialized
-          ? _onFlashButtonPressed
-          : null,
-    );
-  }
-
-  /// Toggle Flash
-  Future<void> _onFlashButtonPressed() async {
-    bool hasFlash = false;
-    if (flashMode == FlashMode.off || flashMode == FlashMode.torch) {
-      // Turn on the flash for capture
-      flashMode = FlashMode.alwaysFlash;
-    } else if (flashMode == FlashMode.alwaysFlash) {
-      // Turn on the flash for capture if needed
-      flashMode = FlashMode.autoFlash;
-    } else {
-      // Turn off the flash
-      flashMode = FlashMode.off;
-    }
-    // Apply the new mode
-    await controller.setFlashMode(flashMode);
-
-    // Change UI State
-    setState(() {});
   }
 
   /// Display a row of toggle to select the camera (or a message if no camera is available).
@@ -337,6 +288,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   }
 
   void onNewCameraSelected(CameraDescription cameraDescription) async {
+    if (await Permission.storage.request().isGranted) {
+      print("授權已經取得");
+    } else {
+      print("授權尚未取得");
+    }
     if (controller != null) {
       await controller.dispose();
     }
@@ -406,21 +362,17 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     });
   }
 
-  void toogleAutoFocus() {
-    controller.setAutoFocus(!controller.value.autoFocusEnabled);
-    showInSnackBar('Toogle auto focus');
-  }
-
   Future<String> startVideoRecording() async {
     if (!controller.value.isInitialized) {
       showInSnackBar('Error: select a camera first.');
       return null;
     }
 
-    final Directory extDir = await getApplicationDocumentsDirectory();
-    final String dirPath = '${extDir.path}/Movies/flutter_test';
-    await Directory(dirPath).create(recursive: true);
-    final String filePath = '$dirPath/${timestamp()}.mp4';
+    final String extDir = await ExtStorage.getExternalStoragePublicDirectory(
+        ExtStorage.DIRECTORY_DCIM);
+    print('exDir：' + extDir.toString());
+    await Directory(extDir).create(recursive: true);
+    final String filePath = '$extDir/${timestamp()}.mp4';
 
     if (controller.value.isRecordingVideo) {
       // A recording is already started, do nothing.
@@ -489,7 +441,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       }
     };
     vcontroller.addListener(videoPlayerListener);
-    await vcontroller.setLooping(true);
+    await vcontroller.setLooping(false);
     await vcontroller.initialize();
     await videoController?.dispose();
     if (mounted) {
@@ -534,156 +486,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 class CameraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return
-      MaterialApp(
-        theme: ThemeData(
-          accentTextTheme: TextTheme(body2: TextStyle(color: Colors.white)),
-        ),
-        home: CameraExampleHome(),
-      );
-  }
-}
-
-List<CameraDescription> cameras = [];
-
-Future<void> main() async {
-  // Fetch the available cameras before initializing the app.
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
-    cameras = await availableCameras();
-  } on CameraException catch (e) {
-    logError(e.code, e.description);
-  }
-  runApp(CameraApp());
-}
-
-//Zoomer this will be a seprate widget
-class ZoomableWidget extends StatefulWidget {
-  final Widget child;
-  final Function onZoom;
-  final Function onTapUp;
-
-  const ZoomableWidget({Key key, this.child, this.onZoom, this.onTapUp})
-      : super(key: key);
-
-  @override
-  _ZoomableWidgetState createState() => _ZoomableWidgetState();
-}
-
-class _ZoomableWidgetState extends State<ZoomableWidget> {
-  Matrix4 matrix = Matrix4.identity();
-  double zoom = 1;
-  double prevZoom = 1;
-  bool showZoom = false;
-  Timer t1;
-
-  bool handleZoom(newZoom){
-    if (newZoom >= 1) {
-      if (newZoom > 10) {
-        return false;
-      }
-      setState(() {
-        showZoom = true;
-        zoom = newZoom;
-      });
-
-      if (t1 != null) {
-        t1.cancel();
-      }
-
-      t1 = Timer(Duration(milliseconds: 2000), () {
-        setState(() {
-          showZoom = false;
-        });
-      });
-    }
-    widget.onZoom(zoom);
-    return true;
-
-  }
-  @override
-  Widget build(BuildContext context) {
-
-    return GestureDetector(
-        onScaleStart: (scaleDetails) {
-          print('scalStart');
-          setState(() => prevZoom = zoom);
-          //print(scaleDetails);
-        },
-        onScaleUpdate: (ScaleUpdateDetails scaleDetails) {
-          var newZoom = (prevZoom * scaleDetails.scale);
-
-          handleZoom(newZoom);
-        },
-        onScaleEnd: (scaleDetails) {
-          print('end');
-          //print(scaleDetails);
-        },
-        onTapUp: (TapUpDetails det) {
-          final RenderBox box = context.findRenderObject();
-          final Offset localPoint = box.globalToLocal(det.globalPosition);
-          final Offset scaledPoint =
-          localPoint.scale(1 / box.size.width, 1 / box.size.height);
-          // TODO IMPLIMENT
-          // widget.onTapUp(scaledPoint);
-        },
-        child: Stack(children: [
-          Column(
-            children: <Widget>[
-              Container(
-                child: Expanded(
-                  child: widget.child,
-                ),
-              ),
-            ],
-          ),
-          Visibility(
-            visible: showZoom, //Default is true,
-            child: Positioned.fill(
-              child: Container(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child:
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            valueIndicatorTextStyle: TextStyle(
-                                color: Colors.amber, letterSpacing: 2.0, fontSize: 30),
-                            valueIndicatorColor: Colors.blue,
-                            // This is what you are asking for
-                            inactiveTrackColor: Color(0xFF8D8E98),
-                            // Custom Gray Color
-                            activeTrackColor: Colors.white,
-                            thumbColor: Colors.red,
-                            overlayColor: Color(0x29EB1555),
-                            // Custom Thumb overlay Color
-                            thumbShape:
-                            RoundSliderThumbShape(enabledThumbRadius: 12.0),
-                            overlayShape:
-                            RoundSliderOverlayShape(overlayRadius: 20.0),
-
-                          ),
-                          child: Slider(
-                            value: zoom,
-                            onChanged: (double newValue) {
-                              handleZoom(newValue);
-                            },
-                            label: "$zoom",
-                            min: 1,
-                            max: 10,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )),
-            ),
-            //maintainSize: bool. When true this is equivalent to invisible;
-            //replacement: Widget. Defaults to Sizedbox.shrink, 0x0
-          )
-        ]));
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: CameraExampleHome(),
+    );
   }
 }
