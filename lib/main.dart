@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_msg/screens/HomePage.dart';
 import 'package:flutter_msg/screens/BottomNavigation.dart';
 import 'package:flutter_msg/screens/CameraView.dart';
+import 'package:flutter_msg/screens/View.dart';
 
 void main() {
   runApp(MyApp());

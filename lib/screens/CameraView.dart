@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:ext_storage/ext_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:media_scanner_scan_file/media_scanner_scan_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
@@ -42,7 +43,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   Future<void> permissionRequest() async {
     Map<Permission, PermissionStatus> status =
-    await [Permission.notification, Permission.camera, Permission.storage, Permission.microphone].request();
+    await [Permission.notification, Permission.camera, Permission.storage, Permission.microphone, Permission.mediaLibrary].request();
   }
 
   List<CameraDescription> cameras = [];
@@ -330,6 +331,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
           videoController = null;
         });
         if (filePath != null) showInSnackBar('Picture saved to $filePath');
+        _scanFile(File(filePath));
       }
     });
   }
@@ -345,6 +347,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     stopVideoRecording().then((_) {
       if (mounted) setState(() {});
       showInSnackBar('Video recorded to: $videoPath');
+      _scanFile(File(videoPath));
     });
   }
 
@@ -458,9 +461,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       showInSnackBar('Error: select a camera first.');
       return null;
     }
-    final Directory extDir = await getApplicationDocumentsDirectory();
-    final String dirPath = '${extDir.path}/Pictures/flutter_test';
+    final String dirPath = await ExtStorage.getExternalStoragePublicDirectory(
+        ExtStorage.DIRECTORY_DCIM);
+    print('exDir：' + dirPath.toString());
     await Directory(dirPath).create(recursive: true);
+//    final String dirPath = await ExtStorage.getExternalStoragePublicDirectory(ExtStorage.DIRECTORY_DCIM);
+//    await Directory(dirPath).create(recursive: true);
     final String filePath = '$dirPath/${timestamp()}.jpg';
 
     if (controller.value.isTakingPicture) {
@@ -480,6 +486,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   void _showCameraException(CameraException e) {
     logError(e.code, e.description);
     showInSnackBar('Error: ${e.code}\n${e.description}');
+  }
+
+  Future<String> _scanFile(File f) async{
+    final result = await MediaScannerScanFile.scanFile(f.path);
+    return result['filePath'];
   }
 }
 
