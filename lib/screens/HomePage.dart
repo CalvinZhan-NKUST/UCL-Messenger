@@ -109,8 +109,6 @@ class _HomePageState extends State<HomePage> {
             actions: <Widget>[
               TextButton(
                   onPressed: () async {
-//                    Navigator.push(
-//                        context, MaterialPageRoute(builder: (context) => TakePictureScreen()));
                     if (io.Platform.isIOS) {
                       await launch(globalString.GlobalString.iOSAppUrlLink);
                     } else if (io.Platform.isAndroid) {

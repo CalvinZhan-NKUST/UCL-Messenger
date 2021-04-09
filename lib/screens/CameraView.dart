@@ -5,14 +5,13 @@ import 'package:camera/camera.dart';
 import 'package:ext_storage/ext_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:media_scanner_scan_file/media_scanner_scan_file.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
 
-class CameraExampleHome extends StatefulWidget {
+class CameraView extends StatefulWidget {
   @override
-  _CameraExampleHomeState createState() {
-    return _CameraExampleHomeState();
+  _CameraViewHomeState createState() {
+    return _CameraViewHomeState();
   }
 }
 
@@ -32,7 +31,7 @@ IconData getCameraLensIcon(CameraLensDirection direction) {
 void logError(String code, String message) =>
     print('Error: $code\nError Message: $message');
 
-class _CameraExampleHomeState extends State<CameraExampleHome>
+class _CameraViewHomeState extends State<CameraView>
     with WidgetsBindingObserver {
   CameraController controller;
   String imagePath;
@@ -55,7 +54,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     } on CameraException catch (e) {
       logError(e.code, e.description);
     }
-    runApp(CameraApp());
+    runApp(CameraView());
   }
 
   @override
@@ -491,15 +490,5 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   Future<String> _scanFile(File f) async{
     final result = await MediaScannerScanFile.scanFile(f.path);
     return result['filePath'];
-  }
-}
-
-class CameraApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: CameraExampleHome(),
-    );
   }
 }

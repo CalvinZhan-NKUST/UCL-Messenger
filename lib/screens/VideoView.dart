@@ -5,6 +5,10 @@ import 'package:video_player/video_player.dart';
 import 'package:flutter/material.dart';
 
 class VideoApp extends StatefulWidget {
+  final String videoUrl;
+
+  VideoApp({Key key, this.videoUrl}) : super(key: key);
+
   @override
   _VideoAppState createState() => _VideoAppState();
 }
@@ -26,8 +30,7 @@ class _VideoAppState extends State<VideoApp> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(
-        'https://chatapp.54ucl.com:5000/videos/5fa8a2be-96a4-11eb-b942-00224899e61e.mp4')
+    _controller = VideoPlayerController.network('${widget.videoUrl}')
       ..initialize().then((_) {
         _videoPlayerValue = _controller.value;
         Duration totalDuration = _videoPlayerValue.duration;
@@ -57,24 +60,6 @@ class _VideoAppState extends State<VideoApp> {
   }
 
   void countTime() async {
-//    _controller.addListener(() async {
-//      if (_controller.value.isPlaying) {
-//        Duration res = await _controller.position;
-//        Duration totalDuration = _videoPlayerValue.duration;
-//        totalValue = double.parse(
-//            (parseDuration(totalDuration.toString()).inSeconds).toString());
-//        currentValue =
-//            double.parse((parseDuration(res.toString()).inSeconds).toString());
-//        setState(() {
-//          if (percentValue == 0) {
-//            percentValue = currentValue / totalValue;
-//          } else {
-//            percentValue = 0;
-//          }
-//        });
-//      }
-//    });
-
     checkVideoPlaying =
         new Timer.periodic(Duration(milliseconds: 100), (Timer timer) async {
       Duration currentDuration = await _controller.position;
@@ -123,54 +108,82 @@ class _VideoAppState extends State<VideoApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-//        body: PhotoView(
-//          imageProvider: const NetworkImage('https://chatapp.54ucl.com:5000/images/acd2a956-96a2-11eb-b942-00224899e61e.jpg'),
-//        ),
-        body: Column(
-      children: <Widget>[
-        Center(
-          child: _controller.value.isInitialized
-              ? AspectRatio(
-                  aspectRatio: _controller.value.aspectRatio,
-                  child: VideoPlayer(_controller),
-                )
-              : Container(),
-        ),
-        Padding(
-          padding: EdgeInsets.only(right: 10),
-          child: new LinearPercentIndicator(
-            lineHeight: 10,
-            percent: progressValue,
-            leading: IconButton(
-              icon: _controller.value.isPlaying
-                  ? Icon(Icons.pause)
-                  : Icon(Icons.play_arrow),
-              iconSize: 32,
-              onPressed: () {
-                setState(() {
-                  _controller.value.isPlaying
-                      ? _controller.pause()
-                      : _controller.play();
-                  if(currentValue >= totalValue){
-                    var period = Duration(seconds: 0);
-                    _controller.seekTo(period);
-                    countTime();
-                  }
-                });
-              },
-            ),
-            trailing: Text('$showTime'),
-            backgroundColor: Color(0xffE0E0E0),
-            progressColor: Color(0xffdc143c),
-          ),
-        )
-      ],
-    ));
+        body: Container(
+            color: Colors.black,
+            child: Column(
+              children: <Widget>[
+                SizedBox(height: 20),
+                Expanded(
+                    flex: 1,
+                    child: Row(
+                      children: <Widget>[
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                              icon: Icon(Icons.arrow_back),
+                              alignment: Alignment.centerLeft,
+                              color: Colors.white,
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              }),
+                        )
+                      ],
+                    )),
+                Expanded(
+                  flex: 8,
+                  child: _controller.value.isInitialized
+                      ? AspectRatio(
+                          aspectRatio: _controller.value.aspectRatio,
+                          child: VideoPlayer(_controller),
+                        )
+                      : Container(),
+                ),
+                Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 10),
+                      child: new LinearPercentIndicator(
+                        lineHeight: 10,
+                        percent: progressValue,
+                        leading: IconButton(
+                          color: Colors.white,
+                          icon: _controller.value.isPlaying
+                              ? Icon(Icons.pause)
+                              : Icon(Icons.play_arrow),
+                          iconSize: 32,
+                          onPressed: () {
+                            setState(() {
+                              _controller.value.isPlaying
+                                  ? _controller.pause()
+                                  : _controller.play();
+                              if (currentValue >= totalValue) {
+                                var period = Duration(seconds: 0);
+                                _controller.seekTo(period);
+                                countTime();
+                              }
+                            });
+                          },
+                        ),
+                        trailing: Text(
+                          '$showTime',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: Color(0xffE0E0E0),
+                        progressColor: Color(0xffdc143c),
+                      ),
+                    )),
+              ],
+            )));
   }
 
   @override
   void dispose() {
     super.dispose();
+    checkVideoPlaying.cancel();
+    checkVideoPlaying = null;
     _controller.dispose();
   }
 }
