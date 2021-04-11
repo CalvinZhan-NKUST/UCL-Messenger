@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_msg/LongPolling.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
@@ -20,13 +21,15 @@ var _friendCheckList = new Map();
 class _FriendList extends State<FriendList> {
   final TextEditingController _roomNameController = new TextEditingController();
   String _textInput = '';
+
   void getDataBaseFriendList() async {
     _dataBaseFriendList = await DB.selectRoomList();
     _dataBaseUserInfo = await DB.selectUser();
     for (int i = 0; i < _dataBaseFriendList.length; i++) {
       if (_dataBaseFriendList[i].userID.toString() != '0') {
         setState(() {
-          _friendCheckList['${_dataBaseFriendList[i].userID.toString()}']='false';
+          _friendCheckList['${_dataBaseFriendList[i].userID.toString()}'] =
+              'false';
           _friendsList.insert(
               0,
               FriendListWidget(
@@ -90,8 +93,7 @@ class _FriendList extends State<FriendList> {
           ),
           Expanded(
               child: ListView.builder(
-            padding:
-                const EdgeInsets.only(top: 5, bottom: 5),
+            padding: const EdgeInsets.only(top: 5, bottom: 5),
             reverse: false,
             physics: BouncingScrollPhysics(),
             itemBuilder: (context, index) => _friendsList[index],
@@ -105,13 +107,14 @@ class _FriendList extends State<FriendList> {
       },
     );
   }
-  void _submitText(String roomName) async{
+
+  void _submitText(String roomName) async {
     final scaffold = Scaffold.of(context);
     String userIDList = '';
     String _newRoomID = '';
     bool pass = true;
-    for(int i =0; i< _dataBaseFriendList.length; i++){
-      if (_dataBaseFriendList[i].userName==roomName){
+    for (int i = 0; i < _dataBaseFriendList.length; i++) {
+      if (_dataBaseFriendList[i].userName == roomName) {
         scaffold.showSnackBar(SnackBar(
           content: Text("已有相同的群組"),
           action: SnackBarAction(
@@ -120,26 +123,48 @@ class _FriendList extends State<FriendList> {
         pass = false;
       }
 
-      if (_dataBaseFriendList[i].userID.toString() != '0' && _friendCheckList[_dataBaseFriendList[i].userID.toString()] != 'false'){
-          print(_dataBaseFriendList[i].userID.toString()+' , '+_friendCheckList[_dataBaseFriendList[i].userID.toString()]);
-          userIDList += '${_dataBaseFriendList[i].userID.toString()},';
+      if (_dataBaseFriendList[i].userID.toString() != '0' &&
+          _friendCheckList[_dataBaseFriendList[i].userID.toString()] !=
+              'false') {
+        print(_dataBaseFriendList[i].userID.toString() +
+            ' , ' +
+            _friendCheckList[_dataBaseFriendList[i].userID.toString()]);
+        userIDList += '${_dataBaseFriendList[i].userID.toString()},';
       }
     }
 
-    if (userIDList!='' && pass==true){
+    if (userIDList != '' && pass == true) {
       userIDList += '${_dataBaseUserInfo[0].userID.toString()},';
       var url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
-      var response = await http
-          .post(url, body: {'UserIDList': userIDList, 'RoomType': '2', 'RoomName':roomName});
+      var response = await http.post(url, body: {
+        'UserIDList': userIDList,
+        'RoomType': '2',
+        'RoomName': roomName
+      });
       _newRoomID = response.body.toString();
-      print('RoomID:'+_newRoomID);
+      print('RoomID:' + _newRoomID);
       DB.insertSingleRoom(_newRoomID, roomName, '0');
+      shutDownLongPolling();
+      setLongPolling();
       scaffold.showSnackBar(SnackBar(
         content: Text("群組新增完畢"),
         action: SnackBarAction(
             label: '確定', onPressed: scaffold.hideCurrentSnackBar),
       ));
     }
+  }
+
+  void setLongPolling() async {
+    await Future.delayed(Duration(seconds: 1));
+    var dataBaseRoomList = new List();
+    var pollingRoomList = new List();
+
+    dataBaseRoomList = await DB.selectRoomList();
+    for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
+      var room = dataBaseRoomList[i];
+      pollingRoomList.add(room.roomID);
+    }
+    setRoomList(pollingRoomList);
   }
 }
 
@@ -200,7 +225,8 @@ class _FriendListWidget extends State<FriendListWidget> {
                     onChanged: (value) {
                       setState(() {
                         saving = !saving;
-                        _friendCheckList['${widget.userID.toString()}']=saving.toString();
+                        _friendCheckList['${widget.userID.toString()}'] =
+                            saving.toString();
                       });
                     },
                   ),

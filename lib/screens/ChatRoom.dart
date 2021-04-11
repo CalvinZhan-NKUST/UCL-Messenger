@@ -9,7 +9,6 @@ import 'package:flutter_msg/screens/ImageView.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -45,6 +44,8 @@ String _reportRoomID = '';
 String _textInput = '';
 String _msgNew = '${globalString.GlobalString.ipRedis}/getMsg';
 String _msgHistory = '${globalString.GlobalString.ipMysql}/getHistoryMsg';
+String _uploadFilePath = '';
+String _uploadFileType = '';
 
 void setNewMsg(int getMsg, String name, String text) {
   _pollingName = name;
@@ -56,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
   final ScrollController _scrollController = new ScrollController();
   Timer _timerForMsg;
+  Timer _checkFile;
 
   void setLocate(String room) {
     polling.setLocateRoomID(room);
@@ -73,6 +75,27 @@ class _ChatScreenState extends State<ChatScreen> {
             }
         };
     _timerForMsg = Timer.periodic(Duration(seconds: 1), callback);
+  }
+
+  void checkFile() {
+    _checkFile = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
+      if (_uploadFilePath != '' && _uploadFileType != '') {
+        uploadFile(_uploadFileType, _uploadFilePath);
+        _uploadFilePath = '';
+        _uploadFileType = '';
+      }
+    });
+  }
+
+  void uploadFile(String type, String uploadPath) async {
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('${globalString.GlobalString.ipRedis}/uploadFiles'));
+    request.fields.addAll({'FileType': '$type'});
+    request.files.add(await http.MultipartFile.fromPath('File', '$uploadPath'));
+    http.StreamedResponse response = await request.send();
+    String fileUrl = await response.stream.bytesToString();
+    print('檔案上傳結果：$fileUrl');
+    _submitText(type, fileUrl);
   }
 
   Future<void> _checkMsg(String msgUrl) async {
@@ -95,42 +118,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void setMessage(List<Messenger> setNewMessage) {
     for (int i = (setNewMessage.length - 1); i >= 0; i--) {
-      print(i);
-      setState(() {
-        if (setNewMessage[i].sendUserID.toString() == widget.userID) {
-          _messages.insert(
-              0,
-              MessageSend(
-                  text: setNewMessage[i].text,
-                  send: setNewMessage[i].sendName));
-        } else {
-          switch (setNewMessage[i].msgType) {
-            case 'text':
-              _messages.insert(
-                  0,
-                  MessageReceive(
-                      text: setNewMessage[i].text,
-                      send: setNewMessage[i].sendName));
-              break;
-            case 'Image':
-              _messages.insert(
-                  0,
-                  ImageReceive(
-                      text: setNewMessage[i].text,
-                      send: setNewMessage[i].sendName));
-              break;
-            case 'Video':
-              _messages.insert(
-                  0,
-                  VideoReceive(
-                      text: setNewMessage[i].text,
-                      send: setNewMessage[i].sendName));
-              break;
-          }
-        }
-      });
+      insertMessageWidget(
+          setNewMessage[i].sendUserID.toString(),
+          setNewMessage[i].msgType,
+          setNewMessage[i].sendName,
+          setNewMessage[i].text,
+          0);
+      print('傳入的內容：$i');
     }
-
     _nextSN = int.parse(setNewMessage[setNewMessage.length - 1].msgID);
     _getHistoryMsgSN =
         (int.parse(setNewMessage[(setNewMessage.length - 1)].msgID) - 1)
@@ -154,19 +149,57 @@ class _ChatScreenState extends State<ChatScreen> {
     print(hisObjs);
     for (int i = (hisObjs.length - 1); i >= 0; i--) {
       int insertPosition = _messages.length;
-      setState(() {
-        if (hisObjs[i].sendUserID.toString() == widget.userID) {
-          _messages.insert(insertPosition,
-              MessageSend(text: hisObjs[i].text, send: hisObjs[i].sendName));
-        } else {
-          _messages.insert(insertPosition,
-              MessageReceive(text: hisObjs[i].text, send: hisObjs[i].sendName));
-        }
-      });
+      insertMessageWidget(hisObjs[i].sendUserID.toString(), hisObjs[i].msgType,
+          hisObjs[i].sendName, hisObjs[i].text, insertPosition);
     }
 
     _getHistoryMsgSN = (int.parse(hisObjs[0].msgID) - 1).toString();
     print('HistoryMsgSN:' + _getHistoryMsgSN);
+  }
+
+  void insertMessageWidget(String userID, String messageType, String userName,
+      String text, int insertPosition) {
+    setState(() {
+      if (userID == widget.userID) {
+        switch (messageType) {
+          case 'Text':
+            _messages.insert(
+                insertPosition, MessageSend(text: text, send: userName));
+            break;
+          case 'text':
+            _messages.insert(
+                insertPosition, MessageSend(text: text, send: userName));
+            break;
+          case 'Image':
+            _messages.insert(
+                insertPosition, ImageSend(text: text, send: userName));
+            break;
+          case 'Video':
+            _messages.insert(
+                insertPosition, VideoSend(text: text, send: userName));
+            break;
+        }
+      } else {
+        switch (messageType) {
+          case 'Text':
+            _messages.insert(
+                insertPosition, MessageReceive(text: text, send: userName));
+            break;
+          case 'text':
+            _messages.insert(
+                insertPosition, MessageReceive(text: text, send: userName));
+            break;
+          case 'Image':
+            _messages.insert(
+                insertPosition, ImageReceive(text: text, send: userName));
+            break;
+          case 'Video':
+            _messages.insert(
+                insertPosition, VideoReceive(text: text, send: userName));
+            break;
+        }
+      }
+    });
   }
 
   void scroller() {
@@ -192,6 +225,9 @@ class _ChatScreenState extends State<ChatScreen> {
     _pollingName = '';
     _textInput = '';
     _timerForMsg.cancel();
+    _timerForMsg = null;
+    _checkFile.cancel();
+    _checkFile = null;
     print('ChatRoom dispose + ${_messages.length}');
     _chatController.dispose();
     super.dispose();
@@ -203,6 +239,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setLocate(widget.roomID);
     _reportRoomID = widget.roomID;
     _messages.clear();
+    checkFile();
     getNewMsgFromPolling();
     _chatController.clear();
     print('ChatRoom init');
@@ -263,7 +300,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       onPressed: () {
                         _textInput = _chatController.text.trim();
                         if (_textInput.isEmpty == false) {
-                          _submitText(_chatController.text.trim());
+                          _submitText('Text', _chatController.text.trim());
                         }
                       },
                     ),
@@ -274,11 +311,10 @@ class _ChatScreenState extends State<ChatScreen> {
         )));
   }
 
-  Future<void> _submitText(String content) async {
-    setState(() {
-      _messages.insert(0, MessageSend(text: content, send: widget.userName));
-      _chatController.clear();
-    });
+  Future<void> _submitText(String msgType, String content) async {
+    insertMessageWidget(widget.userID, msgType, widget.userName, content, 0);
+    if (msgType == 'Text') _chatController.clear();
+
     print(widget.roomID);
     print(widget.userID);
     print(widget.userName);
@@ -290,12 +326,18 @@ class _ChatScreenState extends State<ChatScreen> {
       'ReceiveName': widget.friendName,
       'ReceiveUserID': widget.friendID,
       'Text': '$content',
-      'MsgType': 'text',
+      'MsgType': '$msgType',
       'DateTime': '${DateTime.now().millisecondsSinceEpoch}'
     });
     print('Response body:${response.body}');
     print(content);
   }
+}
+
+void uploadVideoAndImage(String recordType, String filePath) {
+  print('$recordType, $filePath');
+  _uploadFileType = recordType;
+  _uploadFilePath = filePath;
 }
 
 class MessageSend extends StatelessWidget {
@@ -368,6 +410,200 @@ class MessageSend extends StatelessWidget {
                   backgroundImage: AssetImage('assets/005.png'),
                 ),
                 Text(send, key: anchorKey)
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ImageSend extends StatefulWidget {
+  final String text;
+  final String send;
+
+  ImageSend({Key key, this.text, this.send}) : super(key: key);
+
+  _ImageSendState createState() => _ImageSendState();
+}
+
+class _ImageSendState extends State<ImageSend> {
+  final GlobalKey anchorKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ImageApp(imageUrl: widget.text)));
+      },
+      onLongPressStart: (detail) {
+        RenderBox renderBox = anchorKey.currentContext.findRenderObject();
+        var offset =
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
+              detail.globalPosition.dx, offset.dy),
+          elevation: 10,
+          items: <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+                value: 'value01',
+                child: FlatButton(
+                  child: Text('檢舉這則訊息'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    final scaffold = Scaffold.of(context);
+                    scaffold.showSnackBar(SnackBar(
+                      content: Text("檢舉訊息即將透過Email傳送"),
+                      action: SnackBarAction(
+                          label: '確定', onPressed: scaffold.hideCurrentSnackBar),
+                    ));
+                    sendReport(widget.send, widget.text);
+                  },
+                )),
+//            PopupMenuDivider(),  //這是分隔線
+          ],
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Flexible(
+              child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(10.0),
+                    bottomLeft: Radius.circular(10.0),
+                  ),
+                  child: Container(
+                    width: 90,
+                      height: 160,
+                      margin: const EdgeInsets.only(right: 10),
+                      color: Color(0xff4682b4),
+                      padding: EdgeInsets.all(10.0),
+                      child: Image(
+                        image: NetworkImage('${widget.text}'),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.center,
+                      ))),
+            ),
+            Column(
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundImage: AssetImage('assets/005.png'),
+                ),
+                Text(widget.send, key: anchorKey)
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class VideoSend extends StatefulWidget {
+  final String text;
+  final String send;
+
+  VideoSend({Key key, this.text, this.send}) : super(key: key);
+
+  _VideoSendState createState() => _VideoSendState();
+}
+
+class _VideoSendState extends State<VideoSend> {
+  final GlobalKey anchorKey = GlobalKey();
+  VideoPlayerController _controller;
+
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network('${widget.text}')
+      ..initialize().then((_) {
+        setState(() {});
+      });
+  }
+
+  void dispose(){
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => VideoApp(videoUrl: widget.text)));
+      },
+      onLongPressStart: (detail) {
+        RenderBox renderBox = anchorKey.currentContext.findRenderObject();
+        var offset =
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
+              detail.globalPosition.dx, offset.dy),
+          elevation: 10,
+          items: <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+                value: 'value01',
+                child: FlatButton(
+                  child: Text('檢舉這則訊息'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    final scaffold = Scaffold.of(context);
+                    scaffold.showSnackBar(SnackBar(
+                      content: Text("檢舉訊息即將透過Email傳送"),
+                      action: SnackBarAction(
+                          label: '確定', onPressed: scaffold.hideCurrentSnackBar),
+                    ));
+                    sendReport(widget.send, widget.text);
+                  },
+                )),
+//            PopupMenuDivider(),  //這是分隔線
+          ],
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 1.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Flexible(
+              child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(10.0),
+                    topLeft: Radius.circular(10.0),
+                  ),
+                  child: Container(
+                    height: 160,
+                    width: 90,
+                    margin: const EdgeInsets.only(right: 10),
+                    color: Color(0xff4682b4),
+                    padding: EdgeInsets.all(10.0),
+                    child: _controller.value.isInitialized
+                        ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                        : Container(),
+                  )),
+            ),
+            Column(
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundImage: AssetImage('assets/005.png'),
+                ),
+                Text(widget.send, key: anchorKey)
               ],
             ),
           ],
@@ -570,6 +806,11 @@ class _VideoReceiveState extends State<VideoReceive> {
       ..initialize().then((_) {
         setState(() {});
       });
+  }
+
+  void dispose(){
+    _controller.dispose();
+    super.dispose();
   }
 
   @override

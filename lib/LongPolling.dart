@@ -10,16 +10,15 @@ import 'package:rxdart/subjects.dart';
 import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
 import 'package:vibration/vibration.dart';
 
-
 var period = const Duration(seconds: 5);
-bool timeStart;
+bool timeStart = false;
 var clientRoomList = new List();
 int _times = 0;
 Timer _pollingTimer;
 Map<String, String> client = {};
 String _cancelTimer = '';
 String _userID = '';
-String _locateRoomID= '';
+String _locateRoomID = '';
 String _notifyRoomID = '';
 
 final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
@@ -69,6 +68,7 @@ void setRoomList(List roomList) {
     clientRoomList.add(roomList[i]);
   }
   longPolling(_room);
+  print(_room);
   print('setRoomList');
 }
 
@@ -77,7 +77,7 @@ void setUserID(String chatUserID) {
   print('chatUser:$chatUserID,UserID:$_userID');
 }
 
-void setLocateRoomID(String roomID){
+void setLocateRoomID(String roomID) {
   _locateRoomID = roomID;
 }
 
@@ -94,19 +94,19 @@ void longPolling(String roomNotify) {
       List<RoomMaxSN> tagObjs =
           tagObjsJson.map((tagJson) => RoomMaxSN.fromJson(tagJson)).toList();
       print(tagObjs);
-      if (_cancelTimer=='cancel'){
-        _pollingTimer.cancel();
-        _pollingTimer = null;
-        timeStart = false;
-      }
+//      if (_cancelTimer == 'cancel') {
+//        _pollingTimer.cancel();
+//        _pollingTimer = null;
+//        timeStart = false;
+//      }
     });
   }
 }
 
-void shutDownLongPolling(){
-//  _pollingTimer.cancel();
-//  _pollingTimer = null;
+void shutDownLongPolling() {
   timeStart = false;
+  _pollingTimer.cancel();
+  _pollingTimer = null;
   _cancelTimer = 'cancel';
 }
 
@@ -133,8 +133,8 @@ Future<void> getNewestMsg(String roomID, String msgID) async {
   int _sendID = int.parse(msgID) - 1;
   _notifyRoomID = roomID;
   var url = '${globalString.GlobalString.ipRedis}/getMsg';
-  var response = await http
-      .post(url, body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': '1'});
+  var response = await http.post(url,
+      body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': '1'});
   print('Response body in getNewMsg:${response.body}');
   var tagObjsJson = jsonDecode(response.body)['res'] as List;
   List<Messenger> tagObjs =
@@ -150,7 +150,7 @@ Future<void> notification(
     print('這是自己傳的訊息');
   } else {
     print('notifyRoomID:$_notifyRoomID,chatRoomID:$_locateRoomID');
-    if (_notifyRoomID!=_locateRoomID) {
+    if (_notifyRoomID != _locateRoomID) {
       Vibration.vibrate();
 //      以下為前景通知
 //      print('sendUserID:$sendUserID,UserID:$_userID');
@@ -176,7 +176,7 @@ Future<void> notification(
 //          iOS: iosNotificationDetails);
 //      await flutterLocalNotificationsPlugin
 //          .show(0, sendName, text, platformChannelSpecifics, payload: 'item x');
-    }else{
+    } else {
       chat.setNewMsg(1, sendName, text);
     }
   }
@@ -185,7 +185,7 @@ Future<void> notification(
 Future<void> setFirstMaxSN(String roomID, String msgSN) async {
   _times++;
   sqlite.updateMsgSN(roomID, msgSN);
-  print('進行第Client端MaxSN更新');
+  print('進行第一次Client端MaxSN更新');
   if (_times == clientRoomList.length) {
     print('將進行setClientCache');
     sqlite.setClientCache();
@@ -198,6 +198,7 @@ class RoomMaxSN {
   final String maxSN;
 
   RoomMaxSN(this.roomID, this.maxSN);
+
   factory RoomMaxSN.fromJson(dynamic json) {
     return RoomMaxSN(json['RoomID'] as String, json['MaxSN'] as String);
   }
@@ -223,8 +224,8 @@ class Messenger {
   String text;
   String receiveName;
 
-  Messenger(this.msgID, this.roomID, this.sendUserID, this.sendName, this.receiveName,
-      this.receiveUserID, this.msgType, this.text);
+  Messenger(this.msgID, this.roomID, this.sendUserID, this.sendName,
+      this.receiveName, this.receiveUserID, this.msgType, this.text);
 
   factory Messenger.fromJson(dynamic json) {
     return Messenger(

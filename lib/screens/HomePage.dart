@@ -151,7 +151,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void checkVersion() async{
-    await Future.delayed(Duration(seconds: 2));
+//    await Future.delayed(Duration(seconds: 1));
     print('伺服器版號：${globalString.GlobalString.serverVersion}');
     if ((globalString.GlobalString.serverVersion) ==
         (globalString.GlobalString.appVersion))

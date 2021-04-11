@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:media_scanner_scan_file/media_scanner_scan_file.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_msg/screens/ChatRoom.dart';
 
 class CameraView extends StatefulWidget {
   @override
@@ -36,25 +37,28 @@ class _CameraViewHomeState extends State<CameraView>
   CameraController controller;
   String imagePath;
   String videoPath;
+  int countTime = 0;
   VideoPlayerController videoController;
   VoidCallback videoPlayerListener;
   bool enableAudio = true;
+  Timer videoRecordTimer;
 
   Future<void> permissionRequest() async {
     Map<Permission, PermissionStatus> status =
-    await [Permission.notification, Permission.camera, Permission.storage, Permission.microphone, Permission.mediaLibrary].request();
+    await [Permission.notification, Permission.camera, Permission.storage, Permission.microphone].request();
   }
 
   List<CameraDescription> cameras = [];
-  Future<void> getCameraList() async {
+  void getCameraList() async {
     // Fetch the available cameras before initializing the app.
     try {
       WidgetsFlutterBinding.ensureInitialized();
       cameras = await availableCameras();
+      setState(() {});
     } on CameraException catch (e) {
       logError(e.code, e.description);
     }
-    runApp(CameraView());
+//    runApp(CameraView());
   }
 
   @override
@@ -91,10 +95,28 @@ class _CameraViewHomeState extends State<CameraView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white54,
       key: _scaffoldKey,
       body: Column(
         children: <Widget>[
+          SizedBox(height: 20,child:Container(
+            color: Colors.black,
+          )),
           Expanded(
+              flex:1,child: Container(
+            color: Colors.black,
+          child:Align(
+            alignment: Alignment.centerLeft,
+            child:IconButton(
+                icon: Icon(Icons.arrow_back),
+                alignment: Alignment.centerLeft,
+                color: Colors.white,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                }),
+          ))),
+          Expanded(
+            flex: 10,
             child: Container(
               child: Padding(
                 padding: const EdgeInsets.all(1.0),
@@ -107,14 +129,14 @@ class _CameraViewHomeState extends State<CameraView>
                 border: Border.all(
                   color: controller != null && controller.value.isRecordingVideo
                       ? Colors.redAccent
-                      : Colors.grey,
+                      : Colors.white,
                   width: 3.0,
                 ),
               ),
             ),
           ),
           _captureControlRowWidget(),
-          _toggleAudioWidget(),
+//          _toggleAudioWidget(),
           Padding(
             padding: const EdgeInsets.all(5.0),
             child: Row(
@@ -150,25 +172,25 @@ class _CameraViewHomeState extends State<CameraView>
   }
 
   /// Toggle recording audio
-  Widget _toggleAudioWidget() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 25),
-      child: Row(
-        children: <Widget>[
-          const Text('Enable Audio:'),
-          Switch(
-            value: enableAudio,
-            onChanged: (bool value) {
-              enableAudio = value;
-              if (controller != null) {
-                onNewCameraSelected(controller.description);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
+//  Widget _toggleAudioWidget() {
+//    return Padding(
+//      padding: const EdgeInsets.only(left: 25),
+//      child: Row(
+//        children: <Widget>[
+//          const Text('Enable Audio:'),
+//          Switch(
+//            value: enableAudio,
+//            onChanged: (bool value) {
+//              enableAudio = value;
+//              if (controller != null) {
+//                onNewCameraSelected(controller.description);
+//              }
+//            },
+//          ),
+//        ],
+//      ),
+//    );
+//  }
 
   /// Display the thumbnail of the captured image or video.
   Widget _thumbnailWidget() {
@@ -211,7 +233,7 @@ class _CameraViewHomeState extends State<CameraView>
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
         IconButton(
-          icon: const Icon(Icons.camera_alt),
+          icon: Icon(Icons.camera_alt),
           color: Colors.blue,
           onPressed: controller != null &&
               controller.value.isInitialized &&
@@ -220,7 +242,7 @@ class _CameraViewHomeState extends State<CameraView>
               : null,
         ),
         IconButton(
-          icon: const Icon(Icons.videocam),
+          icon: Icon(Icons.videocam),
           color: Colors.blue,
           onPressed: controller != null &&
               controller.value.isInitialized &&
@@ -229,20 +251,7 @@ class _CameraViewHomeState extends State<CameraView>
               : null,
         ),
         IconButton(
-          icon: controller != null && controller.value.isRecordingPaused
-              ? Icon(Icons.play_arrow)
-              : Icon(Icons.pause),
-          color: Colors.blue,
-          onPressed: controller != null &&
-              controller.value.isInitialized &&
-              controller.value.isRecordingVideo
-              ? (controller != null && controller.value.isRecordingPaused
-              ? onResumeButtonPressed
-              : onPauseButtonPressed)
-              : null,
-        ),
-        IconButton(
-          icon: const Icon(Icons.stop),
+          icon: Icon(Icons.stop),
           color: Colors.red,
           onPressed: controller != null &&
               controller.value.isInitialized &&
@@ -266,7 +275,7 @@ class _CameraViewHomeState extends State<CameraView>
           SizedBox(
             width: 90.0,
             child: RadioListTile<CameraDescription>(
-              title: Icon(getCameraLensIcon(cameraDescription.lensDirection)),
+              title: Icon(getCameraLensIcon(cameraDescription.lensDirection),color: Colors.black,),
               groupValue: controller?.description,
               value: cameraDescription,
               onChanged: controller != null && controller.value.isRecordingVideo
@@ -329,24 +338,41 @@ class _CameraViewHomeState extends State<CameraView>
           videoController?.dispose();
           videoController = null;
         });
-        if (filePath != null) showInSnackBar('Picture saved to $filePath');
+//        if (filePath != null) showInSnackBar('Picture saved to $filePath');
+        uploadVideoAndImage('Image', filePath);
         _scanFile(File(filePath));
+        Navigator.of(context).pop();
       }
     });
   }
 
   void onVideoRecordButtonPressed() {
     startVideoRecording().then((String filePath) {
+      countVideoRecordTime();
       if (mounted) setState(() {});
-      if (filePath != null) showInSnackBar('Saving video to $filePath');
+//      if (filePath != null) showInSnackBar('Saving video to $filePath');
     });
   }
+
+  void countVideoRecordTime(){
+    videoRecordTimer = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
+      countTime++;
+      if (countTime>=60)
+        onStopButtonPressed();
+    });
+  }
+
 
   void onStopButtonPressed() {
     stopVideoRecording().then((_) {
       if (mounted) setState(() {});
-      showInSnackBar('Video recorded to: $videoPath');
+//      showInSnackBar('Video recorded to: $videoPath');
       _scanFile(File(videoPath));
+      uploadVideoAndImage('Video', videoPath);
+      videoRecordTimer.cancel();
+      videoRecordTimer = null;
+      countTime = 0;
+      Navigator.of(context).pop();
     });
   }
 
@@ -492,3 +518,13 @@ class _CameraViewHomeState extends State<CameraView>
     return result['filePath'];
   }
 }
+
+//class CameraApp extends StatelessWidget {
+//  @override
+//  Widget build(BuildContext context) {
+//    return MaterialApp(
+//      debugShowCheckedModeBanner: false,
+//      home: CameraView(),
+//    );
+//  }
+//}

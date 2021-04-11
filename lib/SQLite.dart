@@ -110,13 +110,17 @@ Future<void> insertRoomList(List roomID, List userName, List userID) async{
 
 //存入單一聊天室
 Future<void> insertSingleRoom(String roomID, String userName, String userID) async{
-  String str = 'VALUES ';
-  str += '($roomID, \'$userName\', $userID)';
+  String insertSingleRoom = 'VALUES ';
+  insertSingleRoom += '($roomID, \'$userName\', $userID)';
   final database = openDatabase(
     join(await getDatabasesPath(), 'chatroom.db'),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $str');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $insertSingleRoom');
+
+  String insertSN = 'VALUES ';
+  insertSN +='($roomID, 0)';
+  await db.rawInsert('INSERT INTO roomsn (RoomID, MaxSN) $insertSN');
 }
 
 //取得聊天室列表
@@ -149,11 +153,6 @@ Future<void> insertRoom(List roomID, List maxSN) async {
   );
   final Database db = await database;
   await db.rawInsert('INSERT INTO roomsn $str');
-  _notCloseToOften++;
-  if (_notCloseToOften == 10) {
-    _notCloseToOften = 0;
-//    await db.close();
-  }
 }
 
 //刪除資料表全部資料
@@ -201,10 +200,6 @@ Future<void> updateMsgSN(String roomID, String msgSN) async {
   final Database db = await database;
   db.rawUpdate('UPDATE roomsn SET MaxSN=$msgSN WHERE RoomID=$roomID');
   print('更新所選資訊');
-  if (_notCloseToOften == 10) {
-    _notCloseToOften = 0;
-//    await db.close();
-  }
 }
 
 //查詢聊天室編號

@@ -196,7 +196,7 @@ public class notifyUnit extends Service {
                     }
                 });
             }
-        }, 0, 5000);
+        }, 0, 60000);
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -244,7 +244,7 @@ public class notifyUnit extends Service {
 
     }
 
-    // MQTT是否连接成功
+    // MQTT是否連接成功
     private IMqttActionListener iMqttActionListener = new IMqttActionListener() {
         @Override
         public void onSuccess(IMqttToken arg0) {
@@ -262,7 +262,7 @@ public class notifyUnit extends Service {
         }
     };
 
-    // MQTT监听并且接受消息
+    // MQTT接受新訊息
     private MqttCallback mqttCallback = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) throws Exception {

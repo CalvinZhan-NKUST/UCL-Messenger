@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:http/http.dart' as http;
 import 'dart:io' as io;
+import 'package:flutter_msg/LongPolling.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 
 class SearchAndNewChat extends StatefulWidget {
@@ -216,12 +217,27 @@ class FriendSearchList extends StatelessWidget {
       _newRoomID = response.body.toString();
       print('RoomID:'+_newRoomID);
       DB.insertSingleRoom(_newRoomID, userName, userID);
+      shutDownLongPolling();
+      setLongPolling();
       scaffold.showSnackBar(SnackBar(
         content: Text("聊天室新增完畢"),
         action: SnackBarAction(
             label: '確定', onPressed: scaffold.hideCurrentSnackBar),
       ));
     }
+  }
+
+  void setLongPolling() async {
+    await Future.delayed(Duration(seconds: 1));
+    var dataBaseRoomList = new List();
+    var pollingRoomList = new List();
+
+    dataBaseRoomList = await DB.selectRoomList();
+    for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
+      var room = dataBaseRoomList[i];
+      pollingRoomList.add(room.roomID);
+    }
+    setRoomList(pollingRoomList);
   }
 }
 
