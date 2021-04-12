@@ -30,35 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _serverVersion = '';
   int _sendClick = 0;
 
-  void updateAppVersion() async {
-    showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (BuildContext context) {
-          return CupertinoAlertDialog(
-            content: Text(
-              '${globalString.GlobalString.versionErr}',
-              style: TextStyle(
-                  color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            actions: <Widget>[
-              FlatButton(
-                  onPressed: () async {
-                    if (io.Platform.isIOS) {
-                      await launch(globalString.GlobalString.iOSAppUrlLink);
-                    } else if (io.Platform.isAndroid) {
-                      await launch(globalString.GlobalString.androidAppUrlLink);
-                    }
-                  },
-                  child: Text(
-                    '更新',
-                    style: TextStyle(color: Colors.blue, fontSize: 18),
-                  )),
-            ],
-          );
-        });
-  }
-
   @override
   void initState() {
     _sendClick = 0;
@@ -144,15 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 color: Colors.black,
                 onPressed: () {
-                  if (globalString.GlobalString.serverVersion !=
-                      globalString.GlobalString.appVersion) {
-                    updateAppVersion();
-                  } else {
-                    if (_sendClick == 0) {
-                      _sendClick = 1;
-                      _btnClick(schoolIDController.text.trim(),
-                          passwordController.text.trim());
-                    }
+                  if (_sendClick == 0) {
+                    _sendClick = 1;
+                    _btnClick(schoolIDController.text.trim(),
+                        passwordController.text.trim());
                   }
                 },
                 shape: StadiumBorder(side: BorderSide()),
@@ -238,10 +204,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.of(context).pop();
                       schoolIDController.clear();
                       passwordController.clear();
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                          builder: (context) => HomePage()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => HomePage()));
 //                      Navigator.of(context).pushNamedAndRemoveUntil(
 //                          "/index", ModalRoute.withName("/index"));
                     },
