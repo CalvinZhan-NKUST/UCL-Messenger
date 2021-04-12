@@ -7,7 +7,7 @@ class GlobalString {
   static final String contentErr = '帳號或密碼錯誤\n請重新輸入';
   static final String versionErr = '版本錯誤，請更新';
   static String msgPara = '';
-  static final String appVersion = '1.5';
+  static final String appVersion = '1.6.0';
   static String serverVersion = '';
   static final String iOSAppUrlLink =
       'https://apps.apple.com/us/app/ucl-messenger/id1547578801';

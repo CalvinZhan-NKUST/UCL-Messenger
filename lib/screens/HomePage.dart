@@ -70,11 +70,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
-    apnStorage.storage.append('$name: $payload');
+//    apnStorage.storage.append('$name: $payload');
     print('我點了通知欄');
     print('Name:$name, payload:${payload.toString()}');
-    final action = UNNotificationAction.getIdentifier(payload);
-    print('action:${action.toString()}');
+//    final alert = UNNotificationAction.getIdentifier(payload);
+//    print('alert:${alert.toString()}');
+    print('aps:${payload['aps']}');
+    print('alert:${payload['aps']['alert']}');
+    print('title:${payload['aps']['alert']['title']}');
+    print('body:${payload['aps']['alert']['body']}');
+    print('category:${payload['aps']['category']}');
     if (name == 'onLaunch') {}
     return Future.value(true);
   }
@@ -92,7 +97,16 @@ class _HomePageState extends State<HomePage> {
         'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString
             .appVersion}');
     globalString.GlobalString.serverVersion = resVersion['NowVersion'];
-    checkVersion();
+
+    String s = resVersion['NowVersion'].toString();
+    String versionCode = '';
+    List<String> parts = s.split('.');
+    for (int i =0; i < parts.length; i++){
+      versionCode+=parts[i];
+    }
+    print('$versionCode');
+
+    checkVersion(versionCode);
   }
 
   void updateAppVersion() async {
@@ -150,11 +164,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void checkVersion() async{
-//    await Future.delayed(Duration(seconds: 1));
-    print('伺服器版號：${globalString.GlobalString.serverVersion}');
-    if ((globalString.GlobalString.serverVersion) ==
-        (globalString.GlobalString.appVersion))
+  void checkVersion(String versionServer) async{
+    String s = globalString.GlobalString.appVersion;
+    String versionClient = '';
+    List<String> parts = s.split('.');
+    for (int i =0; i < parts.length; i++){
+      versionClient+=parts[i];
+    }
+    print('Client:$versionClient, Server:$versionServer');
+
+    if (int.parse(versionClient) >= int.parse(versionServer))
       changeMenu();
     else
       updateAppVersion();

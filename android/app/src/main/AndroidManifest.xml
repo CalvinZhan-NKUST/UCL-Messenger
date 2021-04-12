@@ -25,7 +25,8 @@
             android:name=".notifyUnit"
             android:enabled="true"
             android:exported="true"/>
-        <service android:name="org.eclipse.paho.android.service.MqttService" />
+        <service
+            android:name="org.eclipse.paho.android.service.MqttService" />
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"

@@ -280,12 +280,12 @@ public class notifyUnit extends Service {
 
         @Override
         public void deliveryComplete(IMqttDeliveryToken arg0) {
-            Log.d("MQTT","Delivery Complete:"+arg0.toString());
+            Log.d("MQTT","Delivery Complete:"+arg0);
         }
 
         @Override
         public void connectionLost(Throwable arg0) {
-            Log.d("MQTT","Connection Lost:"+arg0.toString());
+            Log.d("MQTT","Connection Lost:"+arg0);
             mqttInit();
         }
     };
@@ -457,9 +457,11 @@ public class notifyUnit extends Service {
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
-        stopSelf();
+//        stopSelf();
         try {
             client.disconnect();
+            client.unregisterResources();
+//            client.close();
         } catch (MqttException e) {
             e.printStackTrace();
         }

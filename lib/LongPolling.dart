@@ -94,19 +94,16 @@ void longPolling(String roomNotify) {
       List<RoomMaxSN> tagObjs =
           tagObjsJson.map((tagJson) => RoomMaxSN.fromJson(tagJson)).toList();
       print(tagObjs);
-//      if (_cancelTimer == 'cancel') {
-//        _pollingTimer.cancel();
-//        _pollingTimer = null;
-//        timeStart = false;
-//      }
     });
   }
 }
 
 void shutDownLongPolling() {
   timeStart = false;
-  _pollingTimer.cancel();
-  _pollingTimer = null;
+  if (_pollingTimer!=null){
+    _pollingTimer.cancel();
+    _pollingTimer = null;
+  }
   _cancelTimer = 'cancel';
 }
 
@@ -229,7 +226,7 @@ class Messenger {
 
   factory Messenger.fromJson(dynamic json) {
     return Messenger(
-        json['MsgID'] as int,
+        int.parse(json['MsgID']) as int,
         json['RoomID'] as String,
         json['SendUserID'] as String,
         json['SendName'] as String,

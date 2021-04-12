@@ -22,6 +22,11 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>App需要您的同意,才能訪問媒體資料庫</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -51,11 +56,6 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-	    <key>NSAllowArbitraryLoads</key>
-	    <true/>
-	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

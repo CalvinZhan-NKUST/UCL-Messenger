@@ -3,6 +3,7 @@ import 'dart:io' as io;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_msg/screens/HomePage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:permission_handler/permission_handler.dart';
@@ -237,8 +238,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.of(context).pop();
                       schoolIDController.clear();
                       passwordController.clear();
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                          "/index", ModalRoute.withName("/index"));
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                          builder: (context) => HomePage()));
+//                      Navigator.of(context).pushNamedAndRemoveUntil(
+//                          "/index", ModalRoute.withName("/index"));
                     },
                     child: Text(
                       '同意',
