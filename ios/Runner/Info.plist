@@ -34,7 +34,7 @@
 	<key>NSCalendarsUsageDescription</key>
 	<string>App需要您的同意,才能訪問日曆</string>
 	<key>NSCameraUsageDescription</key>
-	<string>App需要您的同意,才能訪問相冊</string>
+	<string>App需要您的同意,才能進行拍攝並且儲存於相簿中，並且將照片傳送</string>
 	<key>NSContactsUsageDescription </key>
 	<string>App需要您的同意,才能訪問通訊錄</string>
 	<key>NSLocationAlwaysUsageDescription</key>
@@ -46,7 +46,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>App需要您的同意,才能訪問麥克風</string>
 	<key>NSPhotoLibraryUsageDescription </key>
-	<string>App需要您的同意,才能訪問相機</string>
+	<string>App需要您的同意,才能選取相簿的內容，並傳送</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>App需要您的同意,才能訪問提醒事項</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
