@@ -111,7 +111,7 @@ class PersonalPage extends StatelessWidget {
                       serviceAndroid.stopService();
                     }
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => HomeScreen()));
+                        MaterialPageRoute(builder: (context) => Login()));
                   },
                   shape: StadiumBorder(side: BorderSide()),
                 )

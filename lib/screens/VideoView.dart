@@ -99,8 +99,10 @@ class _VideoAppState extends State<VideoApp> {
 
       if (currentValue >= totalValue) {
         print('影片結束了');
-        checkVideoPlaying.cancel();
-        checkVideoPlaying = null;
+        if (checkVideoPlaying!=null){
+          checkVideoPlaying.cancel();
+          checkVideoPlaying = null;
+        }
       }
     });
   }
@@ -182,8 +184,10 @@ class _VideoAppState extends State<VideoApp> {
   @override
   void dispose() {
     super.dispose();
-    checkVideoPlaying.cancel();
-    checkVideoPlaying = null;
+    if (checkVideoPlaying!=null){
+      checkVideoPlaying.cancel();
+      checkVideoPlaying = null;
+    }
     _controller.dispose();
   }
 }

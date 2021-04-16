@@ -11,9 +11,9 @@ import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:url_launcher/url_launcher.dart';
 
-class HomeScreen extends StatefulWidget {
+class Login extends StatefulWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _LoginState createState() => _LoginState();
 }
 
 var _roomList = new List();
@@ -21,7 +21,7 @@ var _nameList = new List();
 var _idList = new List();
 var _maxSN = new List();
 
-class _HomeScreenState extends State<HomeScreen> {
+class _LoginState extends State<Login> {
   static const String _channel = 'sendUserID';
   TextEditingController schoolIDController = new TextEditingController();
   TextEditingController passwordController = new TextEditingController();
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(
               height: 45.0,
               width: 270.0,
-              child: RaisedButton(
+              child: ElevatedButton(
                 child: Text(
                   'Login',
                   style: TextStyle(
@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white),
                 ),
-                color: Colors.black,
+                style: ElevatedButton.styleFrom(primary: Colors.black, onPrimary: Colors.grey,shape: StadiumBorder(side: BorderSide())),
                 onPressed: () {
                   if (_sendClick == 0) {
                     _sendClick = 1;
@@ -121,7 +121,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         passwordController.text.trim());
                   }
                 },
-                shape: StadiumBorder(side: BorderSide()),
               ),
             ),
             SizedBox(height: 30.0),

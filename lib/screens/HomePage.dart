@@ -181,7 +181,7 @@ class _HomePageState extends State<HomePage> {
 
   void navigationToLogin() {
     Navigator.push(
-        context, MaterialPageRoute(builder: (context) => HomeScreen()));
+        context, MaterialPageRoute(builder: (context) => Login()));
   }
 
   void navigationToIndex() {

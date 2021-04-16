@@ -41,8 +41,8 @@ android {
         applicationId "com.nkust.flutter_msg"
         minSdkVersion 23
         targetSdkVersion 29
-        versionCode 13
-        versionName "1.0"
+        versionCode 15
+        versionName "1.6"
     }
 
     signingConfigs {
