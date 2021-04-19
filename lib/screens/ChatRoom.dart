@@ -834,7 +834,7 @@ class _VideoReceiveState extends State<VideoReceive> {
           items: <PopupMenuEntry<String>>[
             PopupMenuItem<String>(
                 value: 'value01',
-                child: FlatButton(
+                child: TextButton(
                   child: Text('檢舉這則訊息'),
                   onPressed: () {
                     Navigator.of(context).pop();

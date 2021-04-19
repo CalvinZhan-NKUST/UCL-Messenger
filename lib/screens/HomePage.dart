@@ -112,7 +112,7 @@ class _HomePageState extends State<HomePage> {
   void updateAppVersion() async {
     showDialog(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         builder: (BuildContext context) {
           return CupertinoAlertDialog(
             content: Text(

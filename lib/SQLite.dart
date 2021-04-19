@@ -94,6 +94,21 @@ Future<List<UserInfo>> selectUser() async{
   });
 }
 
+//更新使用者資訊
+Future<void> updateUser(int userID, String name) async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), 'chatroom.db'),
+  );
+  final Database db = await database;
+  await db
+      .execute('UPDATE user SET Name=\'$name\' WHERE UserID=$userID');
+  _notCloseToOften++;
+  if (_notCloseToOften == 10) {
+    _notCloseToOften = 0;
+//    await db.close();
+  }
+}
+
 //存入聊天室清單
 Future<void> insertRoomList(List roomID, List userName, List userID) async{
   String str = 'VALUES ';

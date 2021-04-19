@@ -113,7 +113,10 @@ class _LoginState extends State<Login> {
                       fontWeight: FontWeight.bold,
                       color: Colors.white),
                 ),
-                style: ElevatedButton.styleFrom(primary: Colors.black, onPrimary: Colors.grey,shape: StadiumBorder(side: BorderSide())),
+                style: ElevatedButton.styleFrom(
+                    primary: Colors.black,
+                    onPrimary: Colors.grey,
+                    shape: StadiumBorder(side: BorderSide())),
                 onPressed: () {
                   if (_sendClick == 0) {
                     _sendClick = 1;
@@ -136,6 +139,14 @@ class _LoginState extends State<Login> {
   }
 
   _btnClick(String schoolID, String password) async {
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return CupertinoAlertDialog(
+            title: Text('請稍候...'),
+          );
+        });
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
@@ -173,9 +184,10 @@ class _LoginState extends State<Login> {
           tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
       print(tagObjs);
       _sendClick = 0;
+      Navigator.of(context).pop();
       showDialog(
           context: context,
-          barrierDismissible: true,
+          barrierDismissible: false,
           builder: (BuildContext context) {
             return CupertinoAlertDialog(
               content: Text(
@@ -205,8 +217,6 @@ class _LoginState extends State<Login> {
                       passwordController.clear();
                       Navigator.push(context,
                           MaterialPageRoute(builder: (context) => HomePage()));
-//                      Navigator.of(context).pushNamedAndRemoveUntil(
-//                          "/index", ModalRoute.withName("/index"));
                     },
                     child: Text(
                       '同意',
@@ -226,7 +236,7 @@ class _LoginState extends State<Login> {
     } else {
       showDialog(
           context: context,
-          barrierDismissible: true,
+          barrierDismissible: false,
           builder: (BuildContext context) {
             return CupertinoAlertDialog(
               content: Text(
@@ -237,9 +247,10 @@ class _LoginState extends State<Login> {
                     fontWeight: FontWeight.bold),
               ),
               actions: <Widget>[
-                FlatButton(
+                TextButton(
                     onPressed: () {
                       _sendClick = 0;
+                      Navigator.of(context).pop();
                       Navigator.of(context).pop();
                     },
                     child: Text(

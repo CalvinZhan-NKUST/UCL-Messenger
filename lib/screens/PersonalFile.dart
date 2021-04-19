@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter/material.dart';
@@ -5,121 +8,388 @@ import 'package:flutter_msg/screens/Login.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
-import 'package:flutter_msg/main.dart';
 import 'package:flutter_msg/ControllerAndroidService.dart' as serviceAndroid;
 import 'package:flutter_msg/LongPolling.dart' as longPolling;
 
-class PersonalPage extends StatelessWidget {
+class PersonalPage extends StatefulWidget {
+  @override
+  _PersonalPageState createState() => _PersonalPageState();
+}
+
+class _PersonalPageState extends State<PersonalPage> {
+  TextEditingController newUserNameController = new TextEditingController();
+  TextEditingController oldUserPasswordController = new TextEditingController();
+  TextEditingController newUserPasswordController = new TextEditingController();
+  TextEditingController checkUserPasswordController =
+      new TextEditingController();
+
+  var dataBaseUserInfo = new List();
+  bool image = false;
+  var userName = '';
+  var userImageUrl = '';
+  int userID = 0;
+  String passwordErr = '   ';
+
+  void getUserInfo() async {
+    dataBaseUserInfo = await DB.selectUser();
+    var userInfo = dataBaseUserInfo[0];
+    userID = userInfo.userID;
+    userName = userInfo.userName;
+    userImageUrl = userInfo.userImageURL;
+    globalString.GlobalString.userName = userName;
+    print('使用者名稱：$userName');
+    print('圖片連結：$userImageUrl');
+    if (userImageUrl != 'none')
+      image = true;
+    else
+      image = false;
+    setState(() {});
+  }
+
+  void initState() {
+    super.initState();
+    getUserInfo();
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      child: MaterialApp(
-          routes: {
-            "/login": (context) => new MyApp(),
-          },
-          title: 'UCL Messenger',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            primaryColor: Colors.blueAccent,
-            accentColor: Color(0xFFFFFFFF),
-          ),
-          home: Scaffold(
-              body:
-                  ListView(padding: EdgeInsets.symmetric(horizontal: 50), //水平間距
-                      children: <Widget>[
-                SizedBox(height: 70),
-                Column(children: [
-                  CircleAvatar(
-                    radius: 70,
-                    backgroundImage: AssetImage('assets/app_icon.png'),
-                  )
-                ]),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Photo',
-                      style: new TextStyle(
-                          fontSize: 28, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 70),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.account_box_rounded),
-                    SizedBox(width: 10),
-                    Text(
-                      '${globalString.GlobalString.userName}',
-                      style: new TextStyle(fontSize: 22),
-                    )
-                  ],
-                ),
-                SizedBox(height: 20),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.lock_rounded),
-                  SizedBox(width: 10),
-                  SizedBox(
-                    width: 120,
-                    child: RaisedButton(
-                      child: Text(
-                        '更新密碼',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
-                      color: Colors.black,
-                      onPressed: () {
-                        final scaffold = Scaffold.of(context);
-                        scaffold.showSnackBar(SnackBar(
-                          content: Text("功能尚未開放"),
-                          action: SnackBarAction(
-                              label: '確定',
-                              onPressed: scaffold.hideCurrentSnackBar),
-                        ));
-                      },
-                      shape: StadiumBorder(side: BorderSide()),
-                    ),
-                  )
-                ]),
-                SizedBox(height: 100),
-                RaisedButton(
-                  child: Text(
-                    '登出',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+      child: Container(
+        alignment: Alignment.center,
+        color: Color(0xfff8f8ff),
+        child: Column(
+          children: <Widget>[
+            SizedBox(height: 150),
+            Expanded(
+                flex: 2,
+                child: Container(
+                  height: 200,
+                  width: 200,
+                  child: CircleAvatar(
+                    radius: 120,
+                    backgroundImage: image
+                        ? NetworkImage('$userImageUrl')
+                        : AssetImage('assets/005.png'),
                   ),
-                  color: Colors.black,
-                  onPressed: () async {
-                    DB.deleteTableData();
-                    longPolling.shutDownLongPolling();
-                    if (io.Platform.isIOS) {
-                      var tokenURL =
-                          '${globalString.GlobalString.ipRedis}/saveToken';
-                      var saveToken = await http.post(tokenURL, body: {
-                        'UserID': globalString.GlobalString.userID,
-                        'Token': 'none'
-                      });
-                      print('SaveToken body:${saveToken.body}');
-                    }
-                    if (io.Platform.isAndroid) {
-                      serviceAndroid.stopService();
-                    }
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Login()));
-                  },
-                  shape: StadiumBorder(side: BorderSide()),
-                )
-              ]))),
+                )),
+            Expanded(
+                flex: 1,
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        '$userName',
+                        style: new TextStyle(fontSize: 32),
+                      ),
+                      IconButton(
+                          icon: Icon(Icons.edit),
+                          iconSize: 28,
+                          onPressed: () {
+                            showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text('請輸入新的使用者名稱'),
+                                    content: new Row(
+                                      children: <Widget>[
+                                        new Expanded(
+                                          child: TextField(
+                                            controller: newUserNameController,
+                                            autofocus: true,
+                                            obscureText: false,
+                                            decoration: new InputDecoration(
+                                                hintText: '請輸入名稱'),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                    actions: [
+                                      CupertinoButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: Text(
+                                            '取消',
+                                            style: TextStyle(fontSize: 18),
+                                          )),
+                                      CupertinoButton(
+                                          onPressed: () async {
+                                            if (newUserNameController.text
+                                                    .trim() !=
+                                                '') {
+                                              updateUserInfoServer(userID,
+                                                  '${newUserNameController.text.trim()}');
+                                              showDialog(
+                                                  context: context,
+                                                  barrierDismissible: false,
+                                                  builder:
+                                                      (BuildContext context) {
+                                                    return CupertinoAlertDialog(
+                                                      title: Text('請稍候...'),
+                                                    );
+                                                  });
+                                              newUserNameController.clear();
+                                            }
+                                          },
+                                          child: Text(
+                                            '確認',
+                                            style: TextStyle(fontSize: 18),
+                                          ))
+                                    ],
+                                  );
+                                });
+                          })
+                    ])),
+            Expanded(
+                flex: 3,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 120,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            primary: Colors.black,
+                            shape: StadiumBorder(side: BorderSide())),
+                        child: Text(
+                          '更新密碼',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        onPressed: () {
+                          print('替換密碼');
+                          oldUserPasswordController.clear();
+                          newUserPasswordController.clear();
+                          checkUserPasswordController.clear();
+                          showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  content: new Column(
+                                    children: <Widget>[
+                                      new Expanded(
+                                        flex: 1,
+                                        child: Text('請輸入舊密碼'),
+                                      ),
+                                      new Expanded(
+                                          flex: 3,
+                                          child: Align(
+                                            alignment: Alignment.topCenter,
+                                            child: TextField(
+                                              controller:
+                                                  oldUserPasswordController,
+                                              autofocus: true,
+                                              obscureText: true,
+                                              decoration: new InputDecoration(
+                                                  hintText: '請輸入密碼'),
+                                            ),
+                                          )),
+                                      new Expanded(
+                                          flex: 1, child: Text('請輸入新密碼')),
+                                      new Expanded(
+                                          flex: 3,
+                                          child: Align(
+                                            alignment: Alignment.topCenter,
+                                            child: TextField(
+                                              controller:
+                                                  newUserPasswordController,
+                                              autofocus: false,
+                                              obscureText: true,
+                                              decoration: new InputDecoration(
+                                                  hintText: '請輸入密碼'),
+                                            ),
+                                          )),
+                                      new Expanded(
+                                          flex: 1, child: Text('請確認新密碼')),
+                                      new Expanded(
+                                          flex: 3,
+                                          child: Align(
+                                            alignment: Alignment.topCenter,
+                                            child: TextField(
+                                              controller:
+                                                  checkUserPasswordController,
+                                              autofocus: false,
+                                              obscureText: true,
+                                              decoration: new InputDecoration(
+                                                  hintText: '請輸入密碼'),
+                                            ),
+                                          )),
+                                    ],
+                                  ),
+                                  actions: [
+                                    CupertinoButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text(
+                                          '取消',
+                                          style: TextStyle(fontSize: 18),
+                                        )),
+                                    CupertinoButton(
+                                        onPressed: () {
+                                          if (oldUserPasswordController.text.trim() != '' &&
+                                              newUserPasswordController.text
+                                                      .trim() !=
+                                                  '' &&
+                                              checkUserPasswordController.text
+                                                      .trim() !=
+                                                  '') {
+                                            checkPassword(
+                                                userID,
+                                                oldUserPasswordController.text
+                                                    .trim(),
+                                                newUserPasswordController.text
+                                                    .trim(),
+                                                checkUserPasswordController.text
+                                                    .trim());
+                                          } else {
+                                            passwordErr = '欄位不能為空白';
+                                            showDialog(
+                                                context: context,
+                                                barrierDismissible: true,
+                                                builder:
+                                                    (BuildContext context) {
+                                                  return CupertinoAlertDialog(
+                                                    title: Text('$passwordErr'),
+                                                  );
+                                                });
+                                          }
+                                        },
+                                        child: Text(
+                                          '確認',
+                                          style: TextStyle(fontSize: 18),
+                                        ))
+                                  ],
+                                );
+                              });
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                    SizedBox(
+                        width: 120,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              primary: Colors.black,
+                              shape: StadiumBorder(side: BorderSide())),
+                          child: Text(
+                            '登出',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
+                          onPressed: () async {
+                            DB.deleteTableData();
+                            longPolling.shutDownLongPolling();
+                            if (io.Platform.isIOS) {
+                              var tokenURL =
+                                  '${globalString.GlobalString.ipRedis}/saveToken';
+                              var saveToken = await http.post(tokenURL, body: {
+                                'UserID': globalString.GlobalString.userID,
+                                'Token': 'none'
+                              });
+                              print('SaveToken body:${saveToken.body}');
+                            }
+                            if (io.Platform.isAndroid) {
+                              serviceAndroid.stopService();
+                            }
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Login()));
+                          },
+                        ))
+                  ],
+                ))
+          ],
+        ),
+      ),
       onWillPop: () {
+        print('onWillScope');
         SystemNavigator.pop();
         return null;
       },
     );
+  }
+
+  updateUserInfoServer(int userID, String userName) async {
+    String _updateUserNameUrl =
+        '${globalString.GlobalString.ipMysql}/updateUserName';
+    var responseChangeResult = await http.post(_updateUserNameUrl,
+        body: {'UserID': userID.toString(), 'UserName': userName});
+    var res = responseChangeResult.body.toString();
+    print('更換結果：$res');
+    if (res.toString() == 'ok') updateUserInfo(userID, userName);
+  }
+
+  updateUserInfo(int userID, String newUserName) {
+    DB.updateUser(userID, newUserName);
+    Navigator.of(context).pop();
+    Navigator.of(context).pop();
+    getUserInfo();
+  }
+
+  checkPassword(int userID, String oldPassword, String newPassword,
+      String checkPassword) async {
+    if (newPassword != checkPassword) {
+      print('新密碼：$newPassword');
+      print('確認密碼：$checkPassword');
+      passwordErr = '新密碼內容不相符';
+      showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext context) {
+            return CupertinoAlertDialog(
+              title: Text('$passwordErr'),
+            );
+          });
+    } else {
+      showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return CupertinoAlertDialog(
+              title: Text('請稍候...'),
+            );
+          });
+      updateUserPassword(userID, oldPassword, newPassword);
+    }
+  }
+
+  updateUserPassword(int userID, String oldPassword, String newPassword) async {
+    print('進行密碼修改');
+    String _updateUserPasswordUrl =
+        '${globalString.GlobalString.ipMysql}/updateUserPassword';
+    var responsePasswordResult = await http.post(_updateUserPasswordUrl, body: {
+      'UserID': userID.toString(),
+      'oldPassword': oldPassword,
+      'newPassword': newPassword
+    });
+    var res = responsePasswordResult.body.toString();
+    Navigator.of(context).pop();
+
+    if (res != 'Change success!') {
+      print('$res');
+      passwordErr = '更新失敗，密碼輸入錯誤';
+      showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (BuildContext context) {
+            return CupertinoAlertDialog(
+              title: Text('$passwordErr'),
+            );
+          });
+    } else {
+      print('結果：$res');
+      Navigator.of(context).pop();
+      passwordErr = '';
+    }
   }
 }
