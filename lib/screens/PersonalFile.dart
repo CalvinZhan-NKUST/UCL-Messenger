@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter_msg/screens/HeadShot.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
@@ -22,6 +24,8 @@ class _PersonalPageState extends State<PersonalPage> {
   TextEditingController newUserPasswordController = new TextEditingController();
   TextEditingController checkUserPasswordController =
       new TextEditingController();
+  Timer _checkFile;
+
 
   var dataBaseUserInfo = new List();
   bool image = false;
@@ -49,6 +53,15 @@ class _PersonalPageState extends State<PersonalPage> {
   void initState() {
     super.initState();
     getUserInfo();
+    checkFile();
+  }
+
+  void dispose(){
+    if (_checkFile!=null){
+      _checkFile.cancel();
+      _checkFile = null;
+    }
+    super.dispose();
   }
 
   @override
@@ -65,12 +78,34 @@ class _PersonalPageState extends State<PersonalPage> {
                 child: Container(
                   height: 200,
                   width: 200,
-                  child: CircleAvatar(
-                    radius: 120,
-                    backgroundImage: image
-                        ? NetworkImage('$userImageUrl')
-                        : AssetImage('assets/005.png'),
-                  ),
+                  child: Stack(alignment: Alignment.center, children: <Widget>[
+                    Container(
+                      height: 200,
+                      width: 200,
+                      child: CircleAvatar(
+                        radius: 120,
+                        backgroundImage: image
+                            ? NetworkImage('$userImageUrl')
+                            : AssetImage('assets/005.png'),
+                      ),
+                    ),
+                    Positioned(
+                        right: 2,
+                        bottom: 0,
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: IconButton(
+                              iconSize: 32,
+                              icon: Icon(Icons.camera_alt),
+                              onPressed: () {
+                                print('更換大頭貼');
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => CameraHeadShot()));
+                              }),
+                        ))
+                  ]),
                 )),
             Expanded(
                 flex: 1,
@@ -287,6 +322,7 @@ class _PersonalPageState extends State<PersonalPage> {
                           ),
                           onPressed: () async {
                             DB.deleteTableData();
+//                            DB.dropTable(); //刪除資料表
                             longPolling.shutDownLongPolling();
                             if (io.Platform.isIOS) {
                               var tokenURL =
@@ -330,7 +366,7 @@ class _PersonalPageState extends State<PersonalPage> {
   }
 
   updateUserInfo(int userID, String newUserName) {
-    DB.updateUser(userID, newUserName);
+    DB.updateUserName(userID, newUserName);
     Navigator.of(context).pop();
     Navigator.of(context).pop();
     getUserInfo();
@@ -391,5 +427,52 @@ class _PersonalPageState extends State<PersonalPage> {
       Navigator.of(context).pop();
       passwordErr = '';
     }
+  }
+
+  checkFile() {
+    _checkFile = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
+      if (globalString.GlobalString.headShotFilePath != '') {
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder:
+                (BuildContext context) {
+              return CupertinoAlertDialog(
+                title: Text('請稍候...'),
+              );
+            });
+        uploadFile('Image', globalString.GlobalString.headShotFilePath);
+        globalString.GlobalString.headShotFilePath = '';
+      }
+    });
+  }
+
+  uploadFile(String type, String uploadPath) async {
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('${globalString.GlobalString.ipRedis}/uploadFiles'));
+    request.fields.addAll({'FileType': '$type'});
+    request.files.add(await http.MultipartFile.fromPath('File', '$uploadPath'));
+    http.StreamedResponse response = await request.send();
+    String fileUrl = await response.stream.bytesToString();
+    print('檔案上傳結果：$fileUrl');
+    uploadUserImage(userID.toString(), fileUrl);
+  }
+
+  uploadUserImage(String userID, String imageUrl) async {
+    String _updateUserPasswordUrl =
+        '${globalString.GlobalString.ipMysql}/uploadUserImage';
+    var responsePasswordResult = await http.post(_updateUserPasswordUrl, body: {
+      'UserID': userID,
+      'UserImageUrl': imageUrl,
+    });
+    var res = responsePasswordResult.body.toString();
+    print('upload UserImage Result:$res');
+    updateUserImageUrl(int.parse(userID), imageUrl);
+  }
+
+  updateUserImageUrl(int userID, String userImageUrl) async {
+    DB.updateUserImage(userID, userImageUrl);
+    getUserInfo();
+    Navigator.of(context).pop();
   }
 }

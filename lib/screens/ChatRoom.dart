@@ -18,13 +18,17 @@ class ChatScreen extends StatefulWidget {
       this.friendName,
       this.userName,
       this.roomID,
-      this.friendID})
+      this.friendID,
+      this.friendImageUrl,
+      this.userImageUrl})
       : super(key: key);
-  final String userID;
-  final String friendName;
-  final String userName;
-  final String roomID;
   final String friendID;
+  final String friendName;
+  final String friendImageUrl;
+  final String userName;
+  final String userID;
+  final String userImageUrl;
+  final String roomID;
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -69,7 +73,7 @@ class _ChatScreenState extends State<ChatScreen> {
             {
               setState(() {
                 _messages.insert(
-                    0, MessageReceive(text: _pollingText, send: _pollingName));
+                    0, MessageReceive(text: _pollingText, send: _pollingName, image: widget.friendImageUrl));
                 _newMsg = 0;
               })
             }
@@ -164,38 +168,54 @@ class _ChatScreenState extends State<ChatScreen> {
         switch (messageType) {
           case 'Text':
             _messages.insert(
-                insertPosition, MessageSend(text: text, send: userName));
+                insertPosition,
+                MessageSend(
+                    text: text, send: userName, image: widget.userImageUrl));
             break;
           case 'text':
             _messages.insert(
-                insertPosition, MessageSend(text: text, send: userName));
+                insertPosition,
+                MessageSend(
+                    text: text, send: userName, image: widget.userImageUrl));
             break;
           case 'Image':
             _messages.insert(
-                insertPosition, ImageSend(text: text, send: userName));
+                insertPosition,
+                ImageSend(
+                    text: text, send: userName, image: widget.userImageUrl));
             break;
           case 'Video':
             _messages.insert(
-                insertPosition, VideoSend(text: text, send: userName));
+                insertPosition,
+                VideoSend(
+                    text: text, send: userName, image: widget.userImageUrl));
             break;
         }
       } else {
         switch (messageType) {
           case 'Text':
             _messages.insert(
-                insertPosition, MessageReceive(text: text, send: userName));
+                insertPosition,
+                MessageReceive(
+                    text: text, send: userName, image: widget.friendImageUrl));
             break;
           case 'text':
             _messages.insert(
-                insertPosition, MessageReceive(text: text, send: userName));
+                insertPosition,
+                MessageReceive(
+                    text: text, send: userName, image: widget.friendImageUrl));
             break;
           case 'Image':
             _messages.insert(
-                insertPosition, ImageReceive(text: text, send: userName));
+                insertPosition,
+                ImageReceive(
+                    text: text, send: userName, image: widget.friendImageUrl));
             break;
           case 'Video':
             _messages.insert(
-                insertPosition, VideoReceive(text: text, send: userName));
+                insertPosition,
+                VideoReceive(
+                    text: text, send: userName, image: widget.friendImageUrl));
             break;
         }
       }
@@ -340,18 +360,34 @@ void uploadVideoAndImage(String recordType, String filePath) {
   _uploadFilePath = filePath;
 }
 
-class MessageSend extends StatelessWidget {
+class MessageSend extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  MessageSend({Key key, this.text, this.send}) : super(key: key);
-  final GlobalKey anchorKey = GlobalKey();
+  MessageSend({Key key, this.text, this.send, this.image}) : super(key: key);
+
+  _MessageSendState createState() => _MessageSendState();
+}
+
+class _MessageSendState extends State<MessageSend> {
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final GlobalKey anchorKey = GlobalKey();
     return GestureDetector(
       onTap: () {
-        print('$text, $send');
+        print('${widget.text}, ${widget.send}');
       },
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
@@ -375,7 +411,7 @@ class MessageSend extends StatelessWidget {
                       action: SnackBarAction(
                           label: '確定', onPressed: scaffold.hideCurrentSnackBar),
                     ));
-                    sendReport(send, text);
+                    sendReport(widget.send, widget.text);
                   },
                 )),
 //            PopupMenuDivider(),  //這是分隔線
@@ -397,7 +433,7 @@ class MessageSend extends StatelessWidget {
                     margin: const EdgeInsets.only(right: 10),
                     color: Color(0xff4682b4),
                     padding: EdgeInsets.all(10.0),
-                    child: Text(text,
+                    child: Text(widget.text,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 5,
                         style: TextStyle(fontSize: 18.0, color: Colors.white)),
@@ -407,9 +443,11 @@ class MessageSend extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage: setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
-                Text(send, key: anchorKey)
+                Text(widget.send, key: anchorKey)
               ],
             ),
           ],
@@ -422,14 +460,25 @@ class MessageSend extends StatelessWidget {
 class ImageSend extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  ImageSend({Key key, this.text, this.send}) : super(key: key);
+  ImageSend({Key key, this.text, this.send, this.image}) : super(key: key);
 
   _ImageSendState createState() => _ImageSendState();
 }
 
 class _ImageSendState extends State<ImageSend> {
   final GlobalKey anchorKey = GlobalKey();
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -481,7 +530,7 @@ class _ImageSendState extends State<ImageSend> {
                     bottomLeft: Radius.circular(10.0),
                   ),
                   child: Container(
-                    width: 90,
+                      width: 90,
                       height: 160,
                       margin: const EdgeInsets.only(right: 10),
                       color: Color(0xff4682b4),
@@ -496,7 +545,9 @@ class _ImageSendState extends State<ImageSend> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
                 Text(widget.send, key: anchorKey)
               ],
@@ -511,8 +562,9 @@ class _ImageSendState extends State<ImageSend> {
 class VideoSend extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  VideoSend({Key key, this.text, this.send}) : super(key: key);
+  VideoSend({Key key, this.text, this.send, this.image}) : super(key: key);
 
   _VideoSendState createState() => _VideoSendState();
 }
@@ -521,15 +573,22 @@ class _VideoSendState extends State<VideoSend> {
   final GlobalKey anchorKey = GlobalKey();
   VideoPlayerController _controller;
 
+  bool setImage = false;
+
   void initState() {
     super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+
     _controller = VideoPlayerController.network('${widget.text}')
       ..initialize().then((_) {
         setState(() {});
       });
   }
 
-  void dispose(){
+  void dispose() {
     _controller.dispose();
     super.dispose();
   }
@@ -591,9 +650,9 @@ class _VideoSendState extends State<VideoSend> {
                     padding: EdgeInsets.all(10.0),
                     child: _controller.value.isInitialized
                         ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
+                            aspectRatio: _controller.value.aspectRatio,
+                            child: VideoPlayer(_controller),
+                          )
                         : Container(),
                   )),
             ),
@@ -601,7 +660,9 @@ class _VideoSendState extends State<VideoSend> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
                 Text(widget.send, key: anchorKey)
               ],
@@ -613,18 +674,34 @@ class _VideoSendState extends State<VideoSend> {
   }
 }
 
-class MessageReceive extends StatelessWidget {
+class MessageReceive extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  MessageReceive({Key key, this.text, this.send}) : super(key: key);
+  MessageReceive({Key key, this.text, this.send, this.image}) : super(key: key);
+
+  _MessageReceiveState createState() => _MessageReceiveState();
+}
+
+class _MessageReceiveState extends State<MessageReceive> {
   final GlobalKey anchorKey = GlobalKey();
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print('$text, $send');
+        print('${widget.text}, ${widget.send}');
       },
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
@@ -648,7 +725,7 @@ class MessageReceive extends StatelessWidget {
                       action: SnackBarAction(
                           label: '確定', onPressed: scaffold.hideCurrentSnackBar),
                     ));
-                    sendReport(send, text);
+                    sendReport(widget.send, widget.text);
                   },
                 )),
 //            PopupMenuDivider(),  //這是分隔線
@@ -664,10 +741,12 @@ class MessageReceive extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
                 Text(
-                  send,
+                  widget.send,
                   key: anchorKey,
                 )
               ],
@@ -682,7 +761,7 @@ class MessageReceive extends StatelessWidget {
                     margin: const EdgeInsets.only(left: 10),
                     color: Color(0xff00bfff),
                     padding: EdgeInsets.all(10.0),
-                    child: Text(text,
+                    child: Text(widget.text,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 5,
                         style: TextStyle(fontSize: 18.0, color: Colors.white)),
@@ -698,14 +777,25 @@ class MessageReceive extends StatelessWidget {
 class ImageReceive extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  ImageReceive({Key key, this.text, this.send}) : super(key: key);
+  ImageReceive({Key key, this.text, this.send, this.image}) : super(key: key);
 
   _ImageReceiveState createState() => _ImageReceiveState();
 }
 
 class _ImageReceiveState extends State<ImageReceive> {
   final GlobalKey anchorKey = GlobalKey();
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -754,7 +844,9 @@ class _ImageReceiveState extends State<ImageReceive> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
                 Text(
                   widget.send,
@@ -790,8 +882,9 @@ class _ImageReceiveState extends State<ImageReceive> {
 class VideoReceive extends StatefulWidget {
   final String text;
   final String send;
+  final String image;
 
-  VideoReceive({Key key, this.text, this.send}) : super(key: key);
+  VideoReceive({Key key, this.text, this.send, this.image}) : super(key: key);
 
   _VideoReceiveState createState() => _VideoReceiveState();
 }
@@ -799,16 +892,22 @@ class VideoReceive extends StatefulWidget {
 class _VideoReceiveState extends State<VideoReceive> {
   final GlobalKey anchorKey = GlobalKey();
   VideoPlayerController _controller;
+  bool setImage = false;
 
   void initState() {
     super.initState();
+    if (widget.image != 'none')
+      setImage = true;
+    else
+      setImage = false;
+
     _controller = VideoPlayerController.network('${widget.text}')
       ..initialize().then((_) {
         setState(() {});
       });
   }
 
-  void dispose(){
+  void dispose() {
     _controller.dispose();
     super.dispose();
   }
@@ -860,7 +959,9 @@ class _VideoReceiveState extends State<VideoReceive> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.image}')
+                      : AssetImage('assets/005.png'),
                 ),
                 Text(
                   widget.send,

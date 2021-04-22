@@ -16,9 +16,8 @@ var clientRoomList = new List();
 int _times = 0;
 Timer _pollingTimer;
 Map<String, String> client = {};
-String _cancelTimer = '';
 String _userID = '';
-String _locateRoomID = '';
+String locateRoomID = '';
 String _notifyRoomID = '';
 
 final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
@@ -78,14 +77,13 @@ void setUserID(String chatUserID) {
 }
 
 void setLocateRoomID(String roomID) {
-  _locateRoomID = roomID;
+  locateRoomID = roomID;
 }
 
 void longPolling(String roomNotify) {
   print('進入長輪詢：$timeStart');
   if (timeStart == false) {
     timeStart = true;
-    _cancelTimer = '';
     _pollingTimer = new Timer.periodic(period, (Timer timer) async {
       var url = '${globalString.GlobalString.ipRedis}/notify';
       var response = await http.post(url, body: {'RoomIDList': roomNotify});
@@ -100,11 +98,10 @@ void longPolling(String roomNotify) {
 
 void shutDownLongPolling() {
   timeStart = false;
-  if (_pollingTimer!=null){
+  if (_pollingTimer != null) {
     _pollingTimer.cancel();
     _pollingTimer = null;
   }
-  _cancelTimer = 'cancel';
 }
 
 //比較每個Room的訊息編號
@@ -118,8 +115,8 @@ class CompareMaxSN {
   void compareMsgSN(String roomID, String maxSN) {
     print('比較Server:$roomID,$maxSN;ClientSN:${client[roomID]}');
     if (int.parse(maxSN) > int.parse(client[roomID])) {
-      getNewestMsg(roomID, maxSN);
-      sqlite.updateMsgSN(roomID, maxSN);
+      getNewestMsg(roomID, client[roomID]);
+      sqlite.updateMsgSN(roomID, (int.parse(client[roomID]) + 1).toString());
       sqlite.setClientCache();
       print('進行取得最新訊息，並且需要通知！！！');
     }
@@ -127,7 +124,7 @@ class CompareMaxSN {
 }
 
 Future<void> getNewestMsg(String roomID, String msgID) async {
-  int _sendID = int.parse(msgID) - 1;
+  int _sendID = int.parse(msgID) + 1;
   _notifyRoomID = roomID;
   var url = '${globalString.GlobalString.ipRedis}/getMsg';
   var response = await http.post(url,
@@ -143,12 +140,10 @@ Future<void> getNewestMsg(String roomID, String msgID) async {
 Future<void> notification(
     String sendName, String sendUserID, String text) async {
   print('notify senderUser:$sendUserID,UserID:$_userID');
-  if (_userID == sendUserID) {
-    print('這是自己傳的訊息');
-  } else {
-    print('notifyRoomID:$_notifyRoomID,chatRoomID:$_locateRoomID');
-    if (_notifyRoomID != _locateRoomID) {
-      Vibration.vibrate();
+
+  print('notifyRoomID:$_notifyRoomID,chatRoomID:$locateRoomID');
+  if (_notifyRoomID != locateRoomID) {
+    Vibration.vibrate();
 //      以下為前景通知
 //      print('sendUserID:$sendUserID,UserID:$_userID');
 //      print('正在進行推播通知');
@@ -173,9 +168,8 @@ Future<void> notification(
 //          iOS: iosNotificationDetails);
 //      await flutterLocalNotificationsPlugin
 //          .show(0, sendName, text, platformChannelSpecifics, payload: 'item x');
-    } else {
-      chat.setNewMsg(1, sendName, text);
-    }
+  } else {
+    chat.setNewMsg(1, sendName, text);
   }
 }
 

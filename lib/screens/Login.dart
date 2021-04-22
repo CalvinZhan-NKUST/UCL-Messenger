@@ -20,6 +20,7 @@ var _roomList = new List();
 var _nameList = new List();
 var _idList = new List();
 var _maxSN = new List();
+var _imageList = new List();
 
 class _LoginState extends State<Login> {
   static const String _channel = 'sendUserID';
@@ -36,7 +37,6 @@ class _LoginState extends State<Login> {
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
-    DB.connectDB();
     permissionRequest();
     super.initState();
   }
@@ -59,6 +59,7 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
+    DB.connectDB();
     return WillPopScope(
       child: Scaffold(
         body: ListView(
@@ -211,7 +212,7 @@ class _LoginState extends State<Login> {
                           int.parse(userID), userName, userImageURL, token);
                       DB.insertLocate(1, 'Login');
                       DB.insertRoom(_roomList, _maxSN);
-                      DB.insertRoomList(_roomList, _nameList, _idList);
+                      DB.insertRoomList(_roomList, _nameList, _idList, _imageList);
                       Navigator.of(context).pop();
                       schoolIDController.clear();
                       passwordController.clear();
@@ -268,12 +269,13 @@ class ChatUser {
   String userName;
   String roomID;
   String userID;
+  String userImageUrl;
 
-  ChatUser(this.userName, this.roomID, this.userID);
+  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
 
   factory ChatUser.fromJson(dynamic json) {
     return ChatUser(json['UserName'] as String, json['RoomID'] as String,
-        json['UserID'] as String);
+        json['UserID'] as String, json['UserImageUrl'] as String);
   }
 
   @override
@@ -281,6 +283,7 @@ class ChatUser {
     _nameList.add(userName);
     _roomList.add(roomID);
     _idList.add(userID);
+    _imageList.add(userImageUrl);
     _maxSN.add('0');
     return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
   }

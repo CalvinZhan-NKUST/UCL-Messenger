@@ -85,6 +85,8 @@ class _IndexScreenState extends State<IndexScreen> {
               roomID: room.roomID.toString(),
               userID: userInfo.userID.toString(),
               userName: userInfo.userName,
+              friendImageUrl: room.userImageUrl.toString(),
+              userImageUrl: userInfo.userImageURL.toString(),
             ));
       }
     });
@@ -123,36 +125,57 @@ class _IndexScreenState extends State<IndexScreen> {
   }
 }
 
-class RecentChat extends StatelessWidget {
+class RecentChat extends StatefulWidget {
   final String friendName;
   final String userID;
   final String userName;
+  final String userImageUrl;
   final String roomID;
   final String friendID;
+  final String friendImageUrl;
 
-  RecentChat(
-      {Key key,
-      this.friendName,
-      this.userID,
-      this.userName,
-      this.roomID,
-      this.friendID})
+  RecentChat({Key key,
+    this.friendName,
+    this.userID,
+    this.userName,
+    this.userImageUrl,
+    this.roomID,
+    this.friendID,
+    this.friendImageUrl})
       : super(key: key);
+
+  _RecentChatState createState() => _RecentChatState();
+
+}
+
+class _RecentChatState extends State<RecentChat>{
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.friendImageUrl != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print('click $roomID');
+        print('click $widget.roomID');
         Navigator.push(
             context,
             MaterialPageRoute(
                 builder: (context) => ChatScreen(
-                      friendName: friendName,
-                      userID: userID,
-                      userName: userName,
-                      roomID: roomID,
-                      friendID: friendID,
+                      friendName: widget.friendName,
+                      userID: widget.userID,
+                      userName: widget.userName,
+                      roomID: widget.roomID,
+                      friendID: widget.friendID,
+                      userImageUrl: widget.userImageUrl,
+                      friendImageUrl: widget.friendImageUrl,
                     )));
       },
       child: Container(
@@ -180,11 +203,13 @@ class RecentChat extends StatelessWidget {
                 ),
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage: AssetImage('assets/005.png'),
+                  backgroundImage:  setImage
+                      ? NetworkImage('${widget.friendImageUrl}')
+                      : AssetImage('assets/005.png'),
                 ),
                 SizedBox(width: 10),
                 Container(
-                  child: Text(friendName,
+                  child: Text(widget.friendName,
                       style: TextStyle(
                           fontSize: 28.0,
                           color: Colors.white,

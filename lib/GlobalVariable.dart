@@ -8,13 +8,15 @@ class GlobalString {
   static final String versionErr = '版本錯誤，請更新';
   static final String changeName = '請輸入新的使用者名稱';
   static String msgPara = '';
-  static final String appVersion = '1.6.2';
+  static final String appVersion = '1.6.3';
   static String serverVersion = '';
   static final String iOSAppUrlLink =
       'https://apps.apple.com/us/app/ucl-messenger/id1547578801';
   static final String androidAppUrlLink =
       'https://play.google.com/store/apps/details?id=com.nkust.flutter_msg';
   static final String searchUser = '搜尋其他使用者';
+
+  static String headShotFilePath = '';
 
   static String uuid = '';
   static String userID = '';

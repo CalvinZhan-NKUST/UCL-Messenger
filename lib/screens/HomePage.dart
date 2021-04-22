@@ -5,13 +5,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter/material.dart';
 import 'package:flutter_apns/flutter_apns.dart';
+import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:flutter_msg/screens/BottomNavigation.dart';
 import 'package:flutter_msg/screens/Login.dart';
-import 'package:flutter_msg/storage.dart' as apnStorage;
+import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_msg/screens/CameraView.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -19,7 +19,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Timer _timer;
   String _token = '';
   var dataBaseUserInfo = new List();
 
@@ -70,8 +69,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
-//    apnStorage.storage.append('$name: $payload');
-    print('我點了通知欄');
+    print('locate:${polling.locateRoomID}');
     print('Name:$name, payload:${payload.toString()}');
 //    final alert = UNNotificationAction.getIdentifier(payload);
 //    print('alert:${alert.toString()}');
@@ -80,8 +78,23 @@ class _HomePageState extends State<HomePage> {
     print('title:${payload['aps']['alert']['title']}');
     print('body:${payload['aps']['alert']['body']}');
     print('category:${payload['aps']['category']}');
+
+    showStr(payload['aps']['category']);
+
+    print('========================');
+    if (payload['aps']['category'].toString() == polling.locateRoomID)
+      chat.setNewMsg(
+          1, payload['aps']['alert']['title'], payload['aps']['alert']['body']);
+
     if (name == 'onLaunch') {}
     return Future.value(true);
+  }
+
+  void showStr(String s){
+    print('s:$s');
+    Map<String, dynamic> user =jsonDecode(s);
+    print('UserID:${user['UserID']}');
+    print('RoomID:${user['RoomID']}');
   }
 
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
@@ -94,15 +107,14 @@ class _HomePageState extends State<HomePage> {
     var responseVersion = await http.post(_checkUrl);
     resVersion = jsonDecode(responseVersion.body);
     print(
-        'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString
-            .appVersion}');
+        'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString.appVersion}');
     globalString.GlobalString.serverVersion = resVersion['NowVersion'];
 
     String s = resVersion['NowVersion'].toString();
     String versionCode = '';
     List<String> parts = s.split('.');
-    for (int i =0; i < parts.length; i++){
-      versionCode+=parts[i];
+    for (int i = 0; i < parts.length; i++) {
+      versionCode += parts[i];
     }
     print('$versionCode');
 
@@ -164,12 +176,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void checkVersion(String versionServer) async{
+  void checkVersion(String versionServer) async {
     String s = globalString.GlobalString.appVersion;
     String versionClient = '';
     List<String> parts = s.split('.');
-    for (int i =0; i < parts.length; i++){
-      versionClient+=parts[i];
+    for (int i = 0; i < parts.length; i++) {
+      versionClient += parts[i];
     }
     print('Client:$versionClient, Server:$versionServer');
 
@@ -180,8 +192,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void navigationToLogin() {
-    Navigator.push(
-        context, MaterialPageRoute(builder: (context) => Login()));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
   }
 
   void navigationToIndex() {
@@ -195,14 +206,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    DB.connectDB();
-    getUserInfo();
     getServerVersion();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    DB.connectDB();
+    getUserInfo();
     return Image.asset('assets/app_icon.png');
   }
 }

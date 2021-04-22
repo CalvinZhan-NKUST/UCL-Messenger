@@ -8,11 +8,12 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 //用於避免資料庫過於頻繁的開關
 int _notCloseToOften = 0;
+String _dataBase = 'chatroom.db';
 
 //連接資料庫和創建資料表
 void connectDB() async {
   final createDatabase = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
     onCreate: (db, version) {
       print('進行資料表user建置');
       db.execute(
@@ -25,18 +26,31 @@ void connectDB() async {
           'CREATE TABLE IF NOT EXISTS roomsn(RoomID INTEGER PRIMARY KEY, MaxSN INTEGER);');
       print('進行資料表roomList建置');
       db.execute(
-          'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER);');
+          'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER, UserImageUrl TEXT);');
       return;
     },
-    version: 1,
+//    onUpgrade: _upgradeDataBase,
+    version: 2,
   );
   print('Connect Finish');
+}
+
+void _upgradeDataBase(Database db, int oldVersion, int newVersion) async{
+  var batch = db.batch();
+  if (oldVersion == 1) {
+    _updateTableCompanyV1toV2(batch);
+  }
+  await batch.commit();
+}
+
+void _updateTableCompanyV1toV2(Batch batch) {
+  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
 }
 
 //寫入使用者目前存在的位置
 Future<void> insertLocate(int locateID, String place) async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.execute('INSERT INTO locate VALUES ($locateID, \'$place\')');
@@ -50,7 +64,7 @@ Future<void> insertLocate(int locateID, String place) async {
 //更新使用者現在處於的畫面
 void updateLocate(String place) async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.execute('UPDATE locate SET Place=$place WHERE LocateID=1');
@@ -64,7 +78,7 @@ void updateLocate(String place) async {
 //存入使用者資料
 Future<void> insertUser(int userID, String name, String userImgURL, String token) async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db
@@ -79,7 +93,7 @@ Future<void> insertUser(int userID, String name, String userImgURL, String token
 //取得使用者資料
 Future<List<UserInfo>> selectUser() async{
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   final List<Map<String, dynamic>> maps = await db.query('user');
@@ -94,10 +108,10 @@ Future<List<UserInfo>> selectUser() async{
   });
 }
 
-//更新使用者資訊
-Future<void> updateUser(int userID, String name) async {
+//更新使用者姓名
+Future<void> updateUserName(int userID, String name) async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db
@@ -109,18 +123,33 @@ Future<void> updateUser(int userID, String name) async {
   }
 }
 
+//更新使用者照片
+Future<void> updateUserImage(int userID, String imageUrl) async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  await db
+      .execute('UPDATE user SET UserImageURL=\'$imageUrl\' WHERE UserID=$userID');
+  _notCloseToOften++;
+  if (_notCloseToOften == 10) {
+    _notCloseToOften = 0;
+//    await db.close();
+  }
+}
+
 //存入聊天室清單
-Future<void> insertRoomList(List roomID, List userName, List userID) async{
+Future<void> insertRoomList(List roomID, List userName, List userID, List imageList) async{
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
-    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}), ';
+    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\'), ';
   }
   str = str.substring(0, str.length - 2);
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $str');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl) $str');
 }
 
 //存入單一聊天室
@@ -128,10 +157,10 @@ Future<void> insertSingleRoom(String roomID, String userName, String userID) asy
   String insertSingleRoom = 'VALUES ';
   insertSingleRoom += '($roomID, \'$userName\', $userID)';
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID) $insertSingleRoom');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl) $insertSingleRoom');
 
   String insertSN = 'VALUES ';
   insertSN +='($roomID, 0)';
@@ -141,7 +170,7 @@ Future<void> insertSingleRoom(String roomID, String userName, String userID) asy
 //取得聊天室列表
 Future<List<RoomList>> selectRoomList() async{
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   final List<Map<String, dynamic>> maps = await db.query('roomList');
@@ -151,6 +180,7 @@ Future<List<RoomList>> selectRoomList() async{
       roomID: maps[i]['RoomID'],
       userID: maps[i]['UserID'],
       userName: maps[i]['UserName'],
+      userImageUrl: maps[i]['UserImageUrl'],
     );
   });
 }
@@ -164,7 +194,7 @@ Future<void> insertRoom(List roomID, List maxSN) async {
   str = str.substring(0, str.length - 2);
   print(str);
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.rawInsert('INSERT INTO roomsn $str');
@@ -174,7 +204,7 @@ Future<void> insertRoom(List roomID, List maxSN) async {
 Future<void> deleteTableData() async {
   _notCloseToOften++;
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   db.execute('DELETE FROM roomsn;');
@@ -192,7 +222,7 @@ Future<void> deleteTableData() async {
 Future<void> dropTable() async {
   _notCloseToOften++;
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   db.execute('DROP TABLE roomsn;');
@@ -210,7 +240,7 @@ Future<void> dropTable() async {
 Future<void> updateMsgSN(String roomID, String msgSN) async {
   _notCloseToOften++;
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   db.rawUpdate('UPDATE roomsn SET MaxSN=$msgSN WHERE RoomID=$roomID');
@@ -220,7 +250,7 @@ Future<void> updateMsgSN(String roomID, String msgSN) async {
 //查詢聊天室編號
 Future<List<ChatRoom>> chatRoom() async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   final List<Map<String, dynamic>> maps = await db.query('roomsn');
@@ -236,7 +266,7 @@ Future<List<ChatRoom>> chatRoom() async {
 //設定前端訊息編號
 Future<List<ChatRoom>> setClientCache() async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   final List<Map<String, dynamic>> maps = await db.query('roomsn');
@@ -253,7 +283,7 @@ Future<List<ChatRoom>> setClientCache() async {
 //查詢單一房間的MaxSN
 Future<List<ChatRoom>> specificRoom(String roomID) async {
   final database = openDatabase(
-    join(await getDatabasesPath(), 'chatroom.db'),
+    join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
 
@@ -322,19 +352,21 @@ class RoomList {
   final int roomID;
   final String userName;
   final int userID;
+  final String userImageUrl;
 
-  RoomList({this.roomID, this.userName, this.userID});
+  RoomList({this.roomID, this.userName, this.userID, this.userImageUrl});
 
   Map<String, dynamic> toMap() {
     return {
       'RoomID':roomID,
       'UserID': userID,
       'UserName': userName,
+      'UserImageUrl':userImageUrl
     };
   }
 
   @override
   String toString() {
-    return '{RoomID: $roomID, UserID: $userID, UserName: $userName}';
+    return '{RoomID: $roomID, UserID: $userID, UserName: $userName, UserImageUrl: $userImageUrl}';
   }
 }

@@ -452,16 +452,18 @@ public class notifyUnit extends Service {
 
     @Override
     public void onDestroy() {
-        timer.cancel();
-        timer = null;
+        if (timer != null){
+            timer.cancel();
+            timer = null;
+        }
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
 //        stopSelf();
         try {
-            client.disconnect();
+//            client.disconnect();
             client.unregisterResources();
-//            client.close();
+            client.close();
         } catch (MqttException e) {
             e.printStackTrace();
         }
