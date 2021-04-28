@@ -181,7 +181,7 @@ class FriendSearchList extends StatelessWidget {
                     iconSize: 36,
                     color: Color(0xfff8f8ff),
                     onPressed: () {
-                      _clickAdd(userName, userID, context);
+                      _clickAdd(userName, userID, context, userImgURL);
                     },
                   ),
                 ),
@@ -193,7 +193,7 @@ class FriendSearchList extends StatelessWidget {
     );
   }
 
-  void _clickAdd(String userName, String userID, BuildContext context) async{
+  void _clickAdd(String userName, String userID, BuildContext context, String userImageUrl) async{
     final scaffold = Scaffold.of(context);
     var userInfo = _dataBaseUserInfo[0];
     int _roomExist = 0;
@@ -213,10 +213,10 @@ class FriendSearchList extends StatelessWidget {
       String _userList = userID + ',' + userInfo.userID.toString() + ',';
       String url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
       var response = await http.post(url,
-          body: {'UserIDList': _userList, 'RoomType': '1', 'RoomName':'none'});
+          body: {'UserID':userInfo.userID.toString(),'UserIDList': _userList, 'RoomType': '1', 'RoomName':'none'});
       _newRoomID = response.body.toString();
       print('RoomID:'+_newRoomID);
-      DB.insertSingleRoom(_newRoomID, userName, userID);
+      DB.insertSingleRoom(_newRoomID, userName, userID, userImageUrl);
       shutDownLongPolling();
       setLongPolling();
       scaffold.showSnackBar(SnackBar(

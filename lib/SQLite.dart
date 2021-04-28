@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:flutter_msg/screens/HomePage.dart' as homePage;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 //用於避免資料庫過於頻繁的開關
@@ -35,16 +34,26 @@ void connectDB() async {
   print('Connect Finish');
 }
 
-void _upgradeDataBase(Database db, int oldVersion, int newVersion) async{
-  var batch = db.batch();
-  if (oldVersion == 1) {
-    _updateTableCompanyV1toV2(batch);
-  }
-  await batch.commit();
-}
+//void _upgradeDataBase(Database db, int oldVersion, int newVersion) async{
+//  var batch = db.batch();
+//  if (oldVersion == 1) {
+//    _updateTableCompanyV1toV2(batch);
+//  }
+//  await batch.commit();
+//}
+//
+//void _updateTableCompanyV1toV2(Batch batch) {
+//  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
+//}
 
-void _updateTableCompanyV1toV2(Batch batch) {
-  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
+Future<String> countChatRoomQuantity() async{
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  int count = Sqflite
+      .firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM roomList'));
+  return '$count';
 }
 
 //寫入使用者目前存在的位置
@@ -153,9 +162,9 @@ Future<void> insertRoomList(List roomID, List userName, List userID, List imageL
 }
 
 //存入單一聊天室
-Future<void> insertSingleRoom(String roomID, String userName, String userID) async{
+Future<void> insertSingleRoom(String roomID, String userName, String userID, String userImageUrl) async{
   String insertSingleRoom = 'VALUES ';
-  insertSingleRoom += '($roomID, \'$userName\', $userID)';
+  insertSingleRoom += '($roomID, \'$userName\', $userID, \'$userImageUrl\')';
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
@@ -217,7 +226,6 @@ Future<void> deleteTableData() async {
 //    await db.close();
   }
 }
-
 
 Future<void> dropTable() async {
   _notCloseToOften++;

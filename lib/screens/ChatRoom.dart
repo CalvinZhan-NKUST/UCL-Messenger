@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:video_player/video_player.dart';
+import 'package:flutter_msg/SQLite.dart' as DB;
 
 class ChatScreen extends StatefulWidget {
   ChatScreen(
@@ -38,12 +39,8 @@ final List<Widget> _messages = []; // 建立一個空陣列
 Map<String, dynamic> res;
 Map<String, dynamic> historyMsg;
 
-int _newMsg = 0;
 int _nextSN = 0;
-
 String _getHistoryMsgSN = '';
-String _pollingText = '';
-String _pollingName = '';
 String _reportRoomID = '';
 String _textInput = '';
 String _msgNew = '${globalString.GlobalString.ipRedis}/getMsg';
@@ -51,10 +48,17 @@ String _msgHistory = '${globalString.GlobalString.ipMysql}/getHistoryMsg';
 String _uploadFilePath = '';
 String _uploadFileType = '';
 
-void setNewMsg(int getMsg, String name, String text) {
-  _pollingName = name;
-  _pollingText = text;
-  _newMsg = getMsg;
+void setNewMsg(String roomID, String userID, String name, String text, String msgType,int msgID) async{
+  if (ChatScreen().roomID==roomID){
+    var chatRoomSN = await DB.chatRoom();
+    for (int i =0; i< chatRoomSN.length; i++){
+      var roomData = chatRoomSN[i];
+      if (roomData.roomID.toString()==roomID && roomData.maxSN < msgID){
+        _ChatScreenState().insertMessageWidget(userID, msgType, name, text, 0);
+      }
+    }
+  }
+  await DB.updateMsgSN(roomID, msgID.toString());
 }
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -65,20 +69,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void setLocate(String room) {
     polling.setLocateRoomID(room);
-  }
-
-  void getNewMsgFromPolling() {
-    var callback = (timer) => {
-          if (_newMsg != 0)
-            {
-              setState(() {
-                _messages.insert(
-                    0, MessageReceive(text: _pollingText, send: _pollingName, image: widget.friendImageUrl));
-                _newMsg = 0;
-              })
-            }
-        };
-    _timerForMsg = Timer.periodic(Duration(seconds: 1), callback);
   }
 
   void checkFile() {
@@ -238,11 +228,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     setLocate('none');
     _messages.clear();
-    _newMsg = 0;
     _nextSN = 0;
     _getHistoryMsgSN = '';
-    _pollingText = '';
-    _pollingName = '';
     _textInput = '';
     _timerForMsg.cancel();
     _timerForMsg = null;
@@ -260,14 +247,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _reportRoomID = widget.roomID;
     _messages.clear();
     checkFile();
-    getNewMsgFromPolling();
     _chatController.clear();
     print('ChatRoom init');
-    _newMsg = 0;
     _nextSN = 0;
     _getHistoryMsgSN = '';
-    _pollingText = '';
-    _pollingName = '';
     _textInput = '';
     _checkMsg(_msgNew);
   }
@@ -349,8 +332,10 @@ class _ChatScreenState extends State<ChatScreen> {
       'MsgType': '$msgType',
       'DateTime': '${DateTime.now().millisecondsSinceEpoch}'
     });
-    print('Response body:${response.body}');
+    var msgID=response.body;
+    print('Response body:$msgID');
     print(content);
+    await DB.updateMsgSN(widget.roomID, msgID);
   }
 }
 

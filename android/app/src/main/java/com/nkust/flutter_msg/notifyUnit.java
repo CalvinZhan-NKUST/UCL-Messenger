@@ -461,9 +461,9 @@ public class notifyUnit extends Service {
         Log.d("Demo", "Service Destroy");
 //        stopSelf();
         try {
-//            client.disconnect();
+            client.disconnect();
             client.unregisterResources();
-            client.close();
+//            client.close();
         } catch (MqttException e) {
             e.printStackTrace();
         }

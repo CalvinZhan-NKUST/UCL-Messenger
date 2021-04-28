@@ -10,7 +10,7 @@ import 'package:rxdart/subjects.dart';
 import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
 import 'package:vibration/vibration.dart';
 
-var period = const Duration(seconds: 5);
+var period = const Duration(seconds: 60);
 bool timeStart = false;
 var clientRoomList = new List();
 int _times = 0;
@@ -18,7 +18,6 @@ Timer _pollingTimer;
 Map<String, String> client = {};
 String _userID = '';
 String locateRoomID = '';
-String _notifyRoomID = '';
 
 final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
     BehaviorSubject<ReceivedNotification>();
@@ -115,61 +114,29 @@ class CompareMaxSN {
   void compareMsgSN(String roomID, String maxSN) {
     print('比較Server:$roomID,$maxSN;ClientSN:${client[roomID]}');
     if (int.parse(maxSN) > int.parse(client[roomID])) {
-      getNewestMsg(roomID, client[roomID]);
-      sqlite.updateMsgSN(roomID, (int.parse(client[roomID]) + 1).toString());
+      int msgPara = int.parse(maxSN) - int.parse(client[roomID]);
+      getNewestMsg(roomID, client[roomID], msgPara.toString());
+      sqlite.updateMsgSN(roomID, maxSN);
       sqlite.setClientCache();
       print('進行取得最新訊息，並且需要通知！！！');
     }
   }
 }
 
-Future<void> getNewestMsg(String roomID, String msgID) async {
+Future<void> getNewestMsg(String roomID, String msgID, String msgPara) async {
   int _sendID = int.parse(msgID) + 1;
-  _notifyRoomID = roomID;
   var url = '${globalString.GlobalString.ipRedis}/getMsg';
   var response = await http.post(url,
-      body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': '1'});
+      body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': msgPara});
   print('Response body in getNewMsg:${response.body}');
   var tagObjsJson = jsonDecode(response.body)['res'] as List;
   List<Messenger> tagObjs =
       tagObjsJson.map((tagJson) => Messenger.fromJson(tagJson)).toList();
   print(tagObjs);
-// Then do notification.
-}
 
-Future<void> notification(
-    String sendName, String sendUserID, String text) async {
-  print('notify senderUser:$sendUserID,UserID:$_userID');
-
-  print('notifyRoomID:$_notifyRoomID,chatRoomID:$locateRoomID');
-  if (_notifyRoomID != locateRoomID) {
-    Vibration.vibrate();
-//      以下為前景通知
-//      print('sendUserID:$sendUserID,UserID:$_userID');
-//      print('正在進行推播通知');
-//
-//      await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-//          onSelectNotification: (String payload) async {
-//            if (payload != null) {
-//              debugPrint('notification payload: $payload');
-//            }
-//          });
-//
-//      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-//      AndroidNotificationDetails(
-//          'your channel id', 'your channel name', 'your channel description',
-//          importance: Importance.max,
-//          priority: Priority.high,
-//          ticker: 'ticker');
-//      const IOSNotificationDetails iosNotificationDetails =
-//      IOSNotificationDetails();
-//      const NotificationDetails platformChannelSpecifics = NotificationDetails(
-//          android: androidPlatformChannelSpecifics,
-//          iOS: iosNotificationDetails);
-//      await flutterLocalNotificationsPlugin
-//          .show(0, sendName, text, platformChannelSpecifics, payload: 'item x');
-  } else {
-    chat.setNewMsg(1, sendName, text);
+  for (int i =0; i< tagObjs.length; i++){
+    var newMsg = tagObjs[i];
+    chat.setNewMsg(newMsg.roomID, newMsg.sendUserID, newMsg.sendName, newMsg.text, newMsg.msgType, newMsg.msgID);
   }
 }
 
@@ -232,7 +199,6 @@ class Messenger {
 
   @override
   String toString() {
-    notification(sendName, sendUserID, text);
     return '{ ${this.roomID}, ${this.msgID}, ${this.sendUserID}, ${this.sendName}, '
         '${this.receiveName}, ${this.receiveUserID}, ${this.msgType}, ${this.text} }';
   }

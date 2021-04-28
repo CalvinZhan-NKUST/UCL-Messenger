@@ -184,6 +184,7 @@ class _LoginState extends State<Login> {
       List<ChatUser> tagObjs =
           tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
       print(tagObjs);
+
       _sendClick = 0;
       Navigator.of(context).pop();
       showDialog(
@@ -213,6 +214,7 @@ class _LoginState extends State<Login> {
                       DB.insertLocate(1, 'Login');
                       DB.insertRoom(_roomList, _maxSN);
                       DB.insertRoomList(_roomList, _nameList, _idList, _imageList);
+                      updateUserChatRoomNum(userID);
                       Navigator.of(context).pop();
                       schoolIDController.clear();
                       passwordController.clear();
@@ -263,6 +265,14 @@ class _LoginState extends State<Login> {
           });
     }
   }
+}
+
+void updateUserChatRoomNum(String userID) async{
+  String roomNum = _roomList.length.toString();
+  var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
+  var res =
+    await http.post(url, body: {'UserID': userID, 'RoomNum': roomNum});
+  print('聊天室新增結果：${res.body}');
 }
 
 class ChatUser {

@@ -18,10 +18,15 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
+var _roomList = new List();
+var _nameList = new List();
+var _idList = new List();
+var _maxSN = new List();
+var _imageList = new List();
+
 class _HomePageState extends State<HomePage> {
   String _token = '';
   var dataBaseUserInfo = new List();
-
   final connector = createPushConnector();
 
   Future<void> _register(String userID) async {
@@ -69,32 +74,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<dynamic> onPush(String name, Map<String, dynamic> payload) {
+    print('========================');
+
     print('locate:${polling.locateRoomID}');
     print('Name:$name, payload:${payload.toString()}');
-//    final alert = UNNotificationAction.getIdentifier(payload);
-//    print('alert:${alert.toString()}');
     print('aps:${payload['aps']}');
     print('alert:${payload['aps']['alert']}');
     print('title:${payload['aps']['alert']['title']}');
     print('body:${payload['aps']['alert']['body']}');
     print('category:${payload['aps']['category']}');
-
-    showStr(payload['aps']['category']);
+    convertCategory(payload['aps']['category'], payload['aps']['alert']['title'].toString(), payload['aps']['alert']['body'].toString());
 
     print('========================');
     if (payload['aps']['category'].toString() == polling.locateRoomID)
-      chat.setNewMsg(
-          1, payload['aps']['alert']['title'], payload['aps']['alert']['body']);
 
     if (name == 'onLaunch') {}
     return Future.value(true);
   }
 
-  void showStr(String s){
-    print('s:$s');
-    Map<String, dynamic> user =jsonDecode(s);
-    print('UserID:${user['UserID']}');
-    print('RoomID:${user['RoomID']}');
+  void convertCategory(String categoryPayload, String sendName, String sendContent){
+    Map<String, dynamic> categoryData =jsonDecode(categoryPayload);
+    print('UserID:${categoryData['UserID']}');
+    print('RoomID:${categoryData['RoomID']}');
+    print('MsgID:${categoryData['MsgID']}');
+    print('MsgID:${categoryData['MsgType']}');
+    chat.setNewMsg(categoryData['RoomID'], categoryData['UserID'], sendName, sendContent, categoryData['MsgType'], categoryData['MsgID']);
   }
 
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
@@ -117,7 +121,6 @@ class _HomePageState extends State<HomePage> {
       versionCode += parts[i];
     }
     print('$versionCode');
-
     checkVersion(versionCode);
   }
 
@@ -200,6 +203,46 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (context) => BottomNavigationController()));
   }
 
+  Future<void> checkRoomNum() async{
+    var userInfo = dataBaseUserInfo[0];
+    var url = '${globalString.GlobalString.ipRedis}/getRoomNum';
+    var response = await http.post(url, body:{
+      'UserID':userInfo.userID.toString(),
+    });
+    Map<String, dynamic> roomNumServer= jsonDecode(response.body);
+    print('Server的聊天室數量：$roomNumServer');
+
+    String roomNumClient = await DB.countChatRoomQuantity();
+    print('Client的聊天室數量：$roomNumClient');
+
+    if ((roomNumServer.toString()) != (roomNumClient.toString())){
+      print('聊天室數量不對');
+
+      var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
+      var chatRoom = await http
+          .post(roomURL, body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
+      print('Response body:${chatRoom.body}');
+      var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
+      List<ChatUser> tagObjs = tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
+      print(tagObjs);
+
+      var dataBaseRoomList = new List();
+      int count = 0;
+      dataBaseRoomList = await DB.selectRoomList();
+
+      for (var i = 0; i < tagObjs.length; i++){
+        for (var j =0; j < dataBaseRoomList.length; j++){
+          if (tagObjs[i].roomID.toString() == dataBaseRoomList[j].roomID.toString()){
+            count++;
+          }
+        }
+        if (count==0)
+          await DB.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(), tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString());
+        count=0;
+      }
+    }
+  }
+
   Future<void> getUserInfo() async {
     dataBaseUserInfo = await DB.selectUser();
   }
@@ -215,5 +258,29 @@ class _HomePageState extends State<HomePage> {
     DB.connectDB();
     getUserInfo();
     return Image.asset('assets/app_icon.png');
+  }
+}
+
+class ChatUser {
+  String userName;
+  String roomID;
+  String userID;
+  String userImageUrl;
+
+  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
+
+  factory ChatUser.fromJson(dynamic json) {
+    return ChatUser(json['UserName'] as String, json['RoomID'] as String,
+        json['UserID'] as String, json['UserImageUrl'] as String);
+  }
+
+  @override
+  String toString() {
+    _nameList.add(userName);
+    _roomList.add(roomID);
+    _idList.add(userID);
+    _imageList.add(userImageUrl);
+    _maxSN.add('0');
+    return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
   }
 }

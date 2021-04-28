@@ -137,13 +137,14 @@ class _FriendList extends State<FriendList> {
       userIDList += '${_dataBaseUserInfo[0].userID.toString()},';
       var url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
       var response = await http.post(url, body: {
+        'UserID':_dataBaseUserInfo[0].userID.toString(),
         'UserIDList': userIDList,
         'RoomType': '2',
         'RoomName': roomName
       });
       _newRoomID = response.body.toString();
       print('RoomID:' + _newRoomID);
-      DB.insertSingleRoom(_newRoomID, roomName, '0');
+      DB.insertSingleRoom(_newRoomID, roomName, '0', 'none');
       shutDownLongPolling();
       setLongPolling();
       scaffold.showSnackBar(SnackBar(

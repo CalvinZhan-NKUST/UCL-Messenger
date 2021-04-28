@@ -91,10 +91,11 @@ class _IndexScreenState extends State<IndexScreen> {
       }
     });
 
-//    polling.setRoomList(pollingRoomList);
-//    polling.setUserID(userInfo.userID.toString());
     if (io.Platform.isAndroid) {
       serviceAndroid.runService();
+    } else if (io.Platform.isIOS){
+      polling.setRoomList(pollingRoomList);
+      polling.setUserID(userInfo.userID.toString());
     }
     print('好友人數：${dataBaseRoomList.length}');
   }
