@@ -8,21 +8,16 @@ import 'package:flutter_apns/flutter_apns.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:flutter_msg/screens/BottomNavigation.dart';
 import 'package:flutter_msg/screens/Login.dart';
-import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
+
 
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
-
-var _roomList = new List();
-var _nameList = new List();
-var _idList = new List();
-var _maxSN = new List();
-var _imageList = new List();
 
 class _HomePageState extends State<HomePage> {
   String _token = '';
@@ -98,7 +93,7 @@ class _HomePageState extends State<HomePage> {
     print('RoomID:${categoryData['RoomID']}');
     print('MsgID:${categoryData['MsgID']}');
     print('MsgID:${categoryData['MsgType']}');
-    chat.setNewMsg(categoryData['RoomID'], categoryData['UserID'], sendName, sendContent, categoryData['MsgType'], categoryData['MsgID']);
+    callMethodChannel.checkMessageOrNewRoom(categoryData['RoomID'], categoryData['UserID'], sendName, sendContent, categoryData['MsgType'], categoryData['MsgID']);
   }
 
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
@@ -203,46 +198,6 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (context) => BottomNavigationController()));
   }
 
-  Future<void> checkRoomNum() async{
-    var userInfo = dataBaseUserInfo[0];
-    var url = '${globalString.GlobalString.ipRedis}/getRoomNum';
-    var response = await http.post(url, body:{
-      'UserID':userInfo.userID.toString(),
-    });
-    Map<String, dynamic> roomNumServer= jsonDecode(response.body);
-    print('Server的聊天室數量：$roomNumServer');
-
-    String roomNumClient = await DB.countChatRoomQuantity();
-    print('Client的聊天室數量：$roomNumClient');
-
-    if ((roomNumServer.toString()) != (roomNumClient.toString())){
-      print('聊天室數量不對');
-
-      var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
-      var chatRoom = await http
-          .post(roomURL, body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
-      print('Response body:${chatRoom.body}');
-      var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
-      List<ChatUser> tagObjs = tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
-      print(tagObjs);
-
-      var dataBaseRoomList = new List();
-      int count = 0;
-      dataBaseRoomList = await DB.selectRoomList();
-
-      for (var i = 0; i < tagObjs.length; i++){
-        for (var j =0; j < dataBaseRoomList.length; j++){
-          if (tagObjs[i].roomID.toString() == dataBaseRoomList[j].roomID.toString()){
-            count++;
-          }
-        }
-        if (count==0)
-          await DB.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(), tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString());
-        count=0;
-      }
-    }
-  }
-
   Future<void> getUserInfo() async {
     dataBaseUserInfo = await DB.selectUser();
   }
@@ -257,30 +212,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     DB.connectDB();
     getUserInfo();
+    polling.checkRoomNum();
+    callMethodChannel.callMethod();
     return Image.asset('assets/app_icon.png');
-  }
-}
-
-class ChatUser {
-  String userName;
-  String roomID;
-  String userID;
-  String userImageUrl;
-
-  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
-
-  factory ChatUser.fromJson(dynamic json) {
-    return ChatUser(json['UserName'] as String, json['RoomID'] as String,
-        json['UserID'] as String, json['UserImageUrl'] as String);
-  }
-
-  @override
-  String toString() {
-    _nameList.add(userName);
-    _roomList.add(roomID);
-    _idList.add(userID);
-    _imageList.add(userImageUrl);
-    _maxSN.add('0');
-    return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
   }
 }

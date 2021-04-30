@@ -1,6 +1,5 @@
 package com.nkust.flutter_msg;
 
-import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -12,18 +11,14 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
-import android.os.Binder;
 import android.os.Build;
-import android.os.Handler;
+import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-
-import com.google.gson.Gson;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -44,6 +39,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -66,7 +63,6 @@ public class notifyUnit extends Service {
     private static MqttAndroidClient client;
     private MqttConnectOptions conOpt;
 
-    //    private String host = "tcp://10.0.2.2:61613";
     private String host = "tcp://chatapp.54ucl.com:1883";
     private String userName = "yoChiMQTT";
     private String passWord = "C217_mia";
@@ -91,7 +87,7 @@ public class notifyUnit extends Service {
         Cursor cursorDB = sqLiteDataBase.rawQuery("SELECT * FROM user", null);
         while (cursorDB.moveToNext()) {
             String userID = cursorDB.getString((cursorDB.getColumnIndex("UserID")));
-            clientID = "User_"+userID;
+            clientID = "User_" + userID;
             Log.d("MQTT", "Service 查詢結果：" + " UserID=" + clientID);
         }
         cursorDB.close();
@@ -136,7 +132,6 @@ public class notifyUnit extends Service {
         Log.d("Demo", getIP + "/notify");
         serviceStart = 0;
 
-
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -153,7 +148,7 @@ public class notifyUnit extends Service {
 
 
                 OkHttpClient notifyClient = new OkHttpClient().newBuilder().build();
-                FormBody.Builder formBody = new FormBody.Builder();//创建表单请求体
+                FormBody.Builder formBody = new FormBody.Builder();
                 formBody.add("RoomIDList", roomList);
                 Request notifyRequest = new Request.Builder()
                         .url(getIP + "/notify")
@@ -201,7 +196,7 @@ public class notifyUnit extends Service {
         return super.onStartCommand(intent, flags, startId);
     }
 
-    public void mqttInit(){
+    public void mqttInit() {
         Context context = this;
         String uri = host;
         client = new MqttAndroidClient(context, uri, clientID);
@@ -216,7 +211,7 @@ public class notifyUnit extends Service {
         boolean doConnect = true;
         String message = "{\"terminal_uid\":\"" + clientID + "\"}";
         String topic = "2";
-        Integer qos = 1;
+        Integer qos = 0;
         Boolean retained = false;
         if ((!message.equals("")) || (!topic.equals(""))) {
             try {
@@ -249,7 +244,8 @@ public class notifyUnit extends Service {
         @Override
         public void onSuccess(IMqttToken arg0) {
             try {
-                client.subscribe(clientID+"/+",0);
+                client.subscribe(clientID + "/+", 0);
+                Log.d("MQTT", "訂閱Topic:" + clientID + "/+");
             } catch (MqttException e) {
                 e.printStackTrace();
             }
@@ -266,29 +262,50 @@ public class notifyUnit extends Service {
     private MqttCallback mqttCallback = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) throws Exception {
-            String str1 = new String(message.getPayload());
-            JSONObject jsonMQTTObj = new JSONObject(str1);
+            Log.d("MQTT", "收到的訊息:" + message.toString());
+            String newMessage = new String(message.getPayload());
+            JSONObject jsonMQTTObj = new JSONObject(newMessage);
             String sendName = jsonMQTTObj.getString("SendName");
             String content = jsonMQTTObj.getString("Text");
             String roomID = jsonMQTTObj.getString("RoomID");
-            String maxSN = jsonMQTTObj.getString("MaxSN");
+            String msgID = jsonMQTTObj.getString("MsgID");
+            String msgType = jsonMQTTObj.getString("MsgType");
+            String userID = jsonMQTTObj.getString("UserID");
 
-            notification(sendName,content);
-            updateClientSN(Integer.parseInt(roomID),Integer.parseInt(maxSN));
-            saveMaxSN(Integer.parseInt(roomID),Integer.parseInt(maxSN));
+            setMessage(roomID, userID, sendName, content, msgType, msgID);
+            notification(sendName, content);
+            saveClientSN(Integer.parseInt(roomID), Integer.parseInt(msgID));
         }
 
         @Override
         public void deliveryComplete(IMqttDeliveryToken arg0) {
-            Log.d("MQTT","Delivery Complete:"+arg0);
+            Log.d("MQTT", "Delivery Complete:" + arg0);
         }
 
         @Override
         public void connectionLost(Throwable arg0) {
-            Log.d("MQTT","Connection Lost:"+arg0);
+            Log.d("MQTT", "Connection Lost:" + arg0);
             mqttInit();
         }
     };
+
+    private void setMessage(String roomID, String userID, String name, String text, String msgType, String msgID) {
+        String newMsg = "{" +
+                "\"RoomID\":\"" + roomID + "\"," +
+                "\"UserID\":\"" + userID + "\"," +
+                "\"SendName\":\"" + name + "\"," +
+                "\"Text\":\"" + text + "\"," +
+                "\"MsgType\":\"" + msgType + "\"," +
+                "\"MsgID\":\"" + msgID + "\"" +
+                "}";
+
+        Log.d("DemoService", newMsg);
+        Bundle message = new Bundle();
+        message.putString("NewMessage", newMsg);
+        Intent it = new Intent("MessageService");
+        it.putExtras(message);
+        sendBroadcast(it);
+    }
 
 
     public void notification(String userName, String text) {
@@ -350,11 +367,6 @@ public class notifyUnit extends Service {
         clientMsgSN.put(roomID.toString(), msgSN.toString());
     }
 
-    public void updateClientSN(Integer roomID, Integer msgSN) {
-        clientMsgSN.put(roomID.toString(), msgSN.toString());
-        //更新進資料庫
-    }
-
     public void checkUserAndPlace(String roomID, String sendUserID, String title, String content) {
         int userID = 0;
         String userLocate = "";
@@ -385,17 +397,19 @@ public class notifyUnit extends Service {
     public void compareSN(Integer roomID, Integer serverSN) {
         Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN);
         if (Integer.parseInt(clientMsgSN.get(roomID.toString())) < serverSN) {
-            String getSN = String.valueOf(serverSN - 1);
+            saveClientSN(roomID, serverSN);
+            String getSN = String.valueOf(Integer.parseInt(clientMsgSN.get(roomID.toString())) - 1);
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    getNewMsg(roomID.toString(), getSN);
+                    int msgPara = serverSN - Integer.parseInt(clientMsgSN.get(roomID.toString()));
+                    getNewMsg(roomID.toString(), getSN, msgPara);
                 }
             }).start();
         }
     }
 
-    public void getNewMsg(String roomID, String msgSN) {
+    public void getNewMsg(String roomID, String msgSN, Integer msgPara) {
         string str = new string();
         String getIP = str.getIP();
 
@@ -403,7 +417,7 @@ public class notifyUnit extends Service {
         FormBody formBody = new FormBody.Builder()
                 .add("RoomID", roomID)
                 .add("MsgID", msgSN)
-                .add("MsgPara", "1")
+                .add("MsgPara", msgPara.toString())
                 .build();
 
         Request getMsgRequest = new Request.Builder()
@@ -427,13 +441,14 @@ public class notifyUnit extends Service {
                     JSONArray array = object.getJSONArray("res");
                     for (int i = 0; i < array.length(); i++) {
                         JSONObject jsonObject = array.getJSONObject(i);
-                        String title = jsonObject.getString("SendName");
-                        String content = jsonObject.getString("Text");
+                        String sendName = jsonObject.getString("SendName");
+                        String text = jsonObject.getString("Text");
                         String roomID = jsonObject.getString("RoomID");
                         String msgID = jsonObject.getString("MsgID");
-                        String sendUSerID = jsonObject.getString("SendUserID");
-                        updateClientSN(Integer.parseInt(roomID), Integer.parseInt(msgID));
-                        checkUserAndPlace(roomID, sendUSerID, title, content);
+                        String sendUserID = jsonObject.getString("SendUserID");
+                        String msgType = jsonObject.getString("MsgType");
+                        checkUserAndPlace(roomID, sendUserID, sendName, text);
+                        setMessage(roomID, sendUserID, sendName, text, msgType, msgID);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -452,18 +467,17 @@ public class notifyUnit extends Service {
 
     @Override
     public void onDestroy() {
-        if (timer != null){
+        setClientCount = 0;
+        if (timer != null) {
             timer.cancel();
             timer = null;
         }
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
-//        stopSelf();
         try {
             client.disconnect();
             client.unregisterResources();
-//            client.close();
         } catch (MqttException e) {
             e.printStackTrace();
         }

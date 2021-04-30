@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:http/http.dart' as http;
-import 'dart:io' as io;
 import 'package:flutter_msg/LongPolling.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 

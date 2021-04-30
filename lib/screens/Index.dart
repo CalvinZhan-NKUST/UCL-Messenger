@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_msg/screens/ChatRoom.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
-import 'package:flutter_msg/ControllerAndroidService.dart' as serviceAndroid;
+import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
 import 'package:flutter_msg/SQLite.dart' as DB;
 
 class IndexScreen extends StatefulWidget {
@@ -92,7 +93,7 @@ class _IndexScreenState extends State<IndexScreen> {
     });
 
     if (io.Platform.isAndroid) {
-      serviceAndroid.runService();
+      callMethodChannel.runService();
     } else if (io.Platform.isIOS){
       polling.setRoomList(pollingRoomList);
       polling.setUserID(userInfo.userID.toString());

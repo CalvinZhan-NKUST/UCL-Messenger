@@ -32,7 +32,7 @@ class ChatScreen extends StatefulWidget {
   final String roomID;
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => new ChatScreenState();
 }
 
 final List<Widget> _messages = []; // 建立一個空陣列
@@ -40,31 +40,36 @@ Map<String, dynamic> res;
 Map<String, dynamic> historyMsg;
 
 int _nextSN = 0;
+String _mainUserID = '';
+String _mainUserName = '';
+String _mainUserImageUrl = '';
+String _friendID = '';
+String _friendName = '';
+String _friendImageUrl = '';
+
 String _getHistoryMsgSN = '';
-String _reportRoomID = '';
+String _recentRoomID = '';
 String _textInput = '';
 String _msgNew = '${globalString.GlobalString.ipRedis}/getMsg';
 String _msgHistory = '${globalString.GlobalString.ipMysql}/getHistoryMsg';
 String _uploadFilePath = '';
 String _uploadFileType = '';
 
-void setNewMsg(String roomID, String userID, String name, String text, String msgType,int msgID) async{
-  if (ChatScreen().roomID==roomID){
-    var chatRoomSN = await DB.chatRoom();
-    for (int i =0; i< chatRoomSN.length; i++){
-      var roomData = chatRoomSN[i];
-      if (roomData.roomID.toString()==roomID && roomData.maxSN < msgID){
-        _ChatScreenState().insertMessageWidget(userID, msgType, name, text, 0);
-      }
+void setNewMsg(String roomID, String userID, String name, String text,
+    String msgType, int msgID) async {
+  if (_recentRoomID == roomID) {
+    var chatRoomSN = await DB.specificRoom(roomID);
+    var msgSN = chatRoomSN[0].maxSN;
+    if (int.parse(msgSN.toString()) < msgID) {
+      await DB.updateMsgSN(roomID, msgID.toString());
+      ChatScreenState().insertMessageWidget(userID, msgType, name, text, 0);
     }
   }
-  await DB.updateMsgSN(roomID, msgID.toString());
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = new TextEditingController();
   final ScrollController _scrollController = new ScrollController();
-  Timer _timerForMsg;
   Timer _checkFile;
 
   void setLocate(String room) {
@@ -73,6 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void checkFile() {
     _checkFile = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
+      setState(() {});
       if (_uploadFilePath != '' && _uploadFileType != '') {
         uploadFile(_uploadFileType, _uploadFilePath);
         _uploadFilePath = '';
@@ -93,9 +99,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _checkMsg(String msgUrl) async {
-    print('checkMsg ${widget.roomID}');
+    print('checkMsg $_recentRoomID');
     var response = await http.post(msgUrl, body: {
-      'RoomID': widget.roomID,
+      'RoomID': _recentRoomID,
       'MsgID': '0',
       'MsgPara': globalString.GlobalString.msgPara
     });
@@ -153,63 +159,62 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void insertMessageWidget(String userID, String messageType, String userName,
       String text, int insertPosition) {
-    setState(() {
-      if (userID == widget.userID) {
-        switch (messageType) {
-          case 'Text':
-            _messages.insert(
-                insertPosition,
-                MessageSend(
-                    text: text, send: userName, image: widget.userImageUrl));
-            break;
-          case 'text':
-            _messages.insert(
-                insertPosition,
-                MessageSend(
-                    text: text, send: userName, image: widget.userImageUrl));
-            break;
-          case 'Image':
-            _messages.insert(
-                insertPosition,
-                ImageSend(
-                    text: text, send: userName, image: widget.userImageUrl));
-            break;
-          case 'Video':
-            _messages.insert(
-                insertPosition,
-                VideoSend(
-                    text: text, send: userName, image: widget.userImageUrl));
-            break;
-        }
-      } else {
-        switch (messageType) {
-          case 'Text':
-            _messages.insert(
-                insertPosition,
-                MessageReceive(
-                    text: text, send: userName, image: widget.friendImageUrl));
-            break;
-          case 'text':
-            _messages.insert(
-                insertPosition,
-                MessageReceive(
-                    text: text, send: userName, image: widget.friendImageUrl));
-            break;
-          case 'Image':
-            _messages.insert(
-                insertPosition,
-                ImageReceive(
-                    text: text, send: userName, image: widget.friendImageUrl));
-            break;
-          case 'Video':
-            _messages.insert(
-                insertPosition,
-                VideoReceive(
-                    text: text, send: userName, image: widget.friendImageUrl));
-            break;
-        }
+    print('新增訊息');
+    if (userID == _mainUserID) {
+      switch (messageType) {
+        case 'Text':
+          _messages.insert(
+              insertPosition,
+              MessageSend(
+                  text: text, send: userName, image: _mainUserImageUrl));
+          break;
+        case 'text':
+          _messages.insert(
+              insertPosition,
+              MessageSend(
+                  text: text, send: userName, image: _mainUserImageUrl));
+          break;
+        case 'Image':
+          _messages.insert(
+              insertPosition,
+              ImageSend(
+                  text: text, send: userName, image: _mainUserImageUrl));
+          break;
+        case 'Video':
+          _messages.insert(
+              insertPosition,
+              VideoSend(
+                  text: text, send: userName, image: _mainUserImageUrl));
+          break;
       }
-    });
+    } else {
+      switch (messageType) {
+        case 'Text':
+          _messages.insert(
+              insertPosition,
+              MessageReceive(
+                  text: text, send: userName, image: _friendImageUrl));
+          break;
+        case 'text':
+          _messages.insert(
+              insertPosition,
+              MessageReceive(
+                  text: text, send: userName, image: _friendImageUrl));
+          break;
+        case 'Image':
+          _messages.insert(
+              insertPosition,
+              ImageReceive(
+                  text: text, send: userName, image: _friendImageUrl));
+          break;
+        case 'Video':
+          _messages.insert(
+              insertPosition,
+              VideoReceive(
+                  text: text, send: userName, image: _friendImageUrl));
+          break;
+      }
+    }
   }
 
   void scroller() {
@@ -226,25 +231,29 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> dispose() async {
     _scrollController.dispose();
-    setLocate('none');
     _messages.clear();
     _nextSN = 0;
     _getHistoryMsgSN = '';
     _textInput = '';
-    _timerForMsg.cancel();
-    _timerForMsg = null;
+    _recentRoomID = '';
     _checkFile.cancel();
     _checkFile = null;
     print('ChatRoom dispose + ${_messages.length}');
     _chatController.dispose();
+    DB.updateLocate('none');
     super.dispose();
   }
 
   void initState() {
     super.initState();
     scroller();
-    setLocate(widget.roomID);
-    _reportRoomID = widget.roomID;
+    _mainUserID = widget.userID;
+    _mainUserName = widget.userName;
+    _mainUserImageUrl = widget.userImageUrl;
+    _recentRoomID = widget.roomID;
+    _friendID = widget.friendID;
+    _friendName = widget.friendName;
+    _friendImageUrl = widget.friendImageUrl;
     _messages.clear();
     checkFile();
     _chatController.clear();
@@ -253,13 +262,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _getHistoryMsgSN = '';
     _textInput = '';
     _checkMsg(_msgNew);
+    DB.updateLocate(_recentRoomID.toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text(widget.friendName),
+          title: Text(_friendName),
           backgroundColor: Color(0xff4682b4),
         ),
         body: Center(
@@ -315,27 +325,28 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _submitText(String msgType, String content) async {
-    insertMessageWidget(widget.userID, msgType, widget.userName, content, 0);
+    insertMessageWidget(_mainUserID, msgType, _mainUserName, content, 0);
     if (msgType == 'Text') _chatController.clear();
 
-    print(widget.roomID);
-    print(widget.userID);
-    print(widget.userName);
+    print(_recentRoomID);
+    print(_mainUserID);
+    print(_mainUserName);
     var url = '${globalString.GlobalString.ipRedis}/send';
     var response = await http.post(url, body: {
-      'RoomID': widget.roomID,
-      'SendUserID': widget.userID,
-      'SendName': widget.userName,
-      'ReceiveName': widget.friendName,
-      'ReceiveUserID': widget.friendID,
+      'RoomID': _recentRoomID,
+      'SendUserID': _mainUserID,
+      'SendName': _mainUserName,
+      'ReceiveName': _friendName,
+      'ReceiveUserID': _friendID,
       'Text': '$content',
       'MsgType': '$msgType',
       'DateTime': '${DateTime.now().millisecondsSinceEpoch}'
     });
-    var msgID=response.body;
-    print('Response body:$msgID');
+    Map<String, dynamic> resVersion;
+    resVersion = jsonDecode(response.body);
+    print('Response body:${resVersion['MsgID']}');
     print(content);
-    await DB.updateMsgSN(widget.roomID, msgID);
+    await DB.updateMsgSN(_recentRoomID, resVersion['MsgID'].toString());
   }
 }
 
@@ -530,7 +541,7 @@ class _ImageSendState extends State<ImageSend> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage:  setImage
+                  backgroundImage: setImage
                       ? NetworkImage('${widget.image}')
                       : AssetImage('assets/005.png'),
                 ),
@@ -645,7 +656,7 @@ class _VideoSendState extends State<VideoSend> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage:  setImage
+                  backgroundImage: setImage
                       ? NetworkImage('${widget.image}')
                       : AssetImage('assets/005.png'),
                 ),
@@ -726,7 +737,7 @@ class _MessageReceiveState extends State<MessageReceive> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage:  setImage
+                  backgroundImage: setImage
                       ? NetworkImage('${widget.image}')
                       : AssetImage('assets/005.png'),
                 ),
@@ -829,7 +840,7 @@ class _ImageReceiveState extends State<ImageReceive> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage:  setImage
+                  backgroundImage: setImage
                       ? NetworkImage('${widget.image}')
                       : AssetImage('assets/005.png'),
                 ),
@@ -944,7 +955,7 @@ class _VideoReceiveState extends State<VideoReceive> {
               children: [
                 CircleAvatar(
                   radius: 25,
-                  backgroundImage:  setImage
+                  backgroundImage: setImage
                       ? NetworkImage('${widget.image}')
                       : AssetImage('assets/005.png'),
                 ),
@@ -1013,7 +1024,7 @@ class Messenger {
 
 void sendReport(String send, String text) async {
   final Email email = Email(
-    body: 'RoomID:$_reportRoomID, Send:$send, Text:$text',
+    body: 'RoomID:$_recentRoomID, Send:$send, Text:$text',
     subject: 'UCL Messenger Report Email',
     recipients: ['F108118121@nkust.edu.tw'],
     isHTML: false,

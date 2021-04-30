@@ -3,7 +3,6 @@ import 'package:flutter_msg/screens/Index.dart';
 import 'package:flutter_msg/screens/PersonalFile.dart';
 import 'package:flutter_msg/screens/SearchAndNewChat.dart';
 import 'package:flutter_msg/screens/FriendList.dart';
-import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 
 class BottomNavigationController extends StatefulWidget {
   BottomNavigationController({Key key}) : super(key: key);

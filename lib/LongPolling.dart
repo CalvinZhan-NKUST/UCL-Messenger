@@ -7,8 +7,8 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/SQLite.dart' as sqlite;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:rxdart/subjects.dart';
-import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
-import 'package:vibration/vibration.dart';
+import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
+
 
 var period = const Duration(seconds: 60);
 bool timeStart = false;
@@ -84,6 +84,7 @@ void longPolling(String roomNotify) {
   if (timeStart == false) {
     timeStart = true;
     _pollingTimer = new Timer.periodic(period, (Timer timer) async {
+      checkRoomNum();
       var url = '${globalString.GlobalString.ipRedis}/notify';
       var response = await http.post(url, body: {'RoomIDList': roomNotify});
       print('LongPolling response body:${response.body}');
@@ -136,7 +137,7 @@ Future<void> getNewestMsg(String roomID, String msgID, String msgPara) async {
 
   for (int i =0; i< tagObjs.length; i++){
     var newMsg = tagObjs[i];
-    chat.setNewMsg(newMsg.roomID, newMsg.sendUserID, newMsg.sendName, newMsg.text, newMsg.msgType, newMsg.msgID);
+    callMethodChannel.checkMessageOrNewRoom(newMsg.roomID, newMsg.sendUserID, newMsg.sendName, newMsg.text, newMsg.msgType, newMsg.msgID);
   }
 }
 
@@ -150,6 +151,58 @@ Future<void> setFirstMaxSN(String roomID, String msgSN) async {
     print('Set結果：${await sqlite.chatRoom()}');
   }
 }
+
+Future<void> checkRoomNum() async{
+  var dataBaseUserInfo = new List();
+  dataBaseUserInfo = await sqlite.selectUser();
+  var userInfo = dataBaseUserInfo[0];
+  var url = '${globalString.GlobalString.ipRedis}/getRoomNum';
+  var response = await http.post(url, body:{
+    'UserID':userInfo.userID.toString(),
+  });
+  Map<String, dynamic> roomNumServer= jsonDecode(response.body);
+  print('Server的聊天室數量：$roomNumServer');
+
+  String roomNumClient = await sqlite.countChatRoomQuantity();
+  print('Client的聊天室數量：$roomNumClient');
+
+  if ((roomNumServer.toString()) != (roomNumClient.toString())){
+    print('聊天室數量不對');
+
+    var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
+    var chatRoom = await http
+        .post(roomURL, body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
+    print('Response body:${chatRoom.body}');
+    var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
+    List<ChatUser> tagObjs = tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
+    print(tagObjs);
+
+    var dataBaseRoomList = new List();
+    int count = 0;
+    dataBaseRoomList = await sqlite.selectRoomList();
+
+    for (var i = 0; i < tagObjs.length; i++){
+      for (var j =0; j < dataBaseRoomList.length; j++){
+        if (tagObjs[i].roomID.toString() == dataBaseRoomList[j].roomID.toString()){
+          count++;
+        }
+      }
+      if (count==0)
+        await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(), tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString());
+      count=0;
+    }
+    updateUserChatRoomNum(userInfo.userID.toString(), tagObjs.length.toString());
+  }
+}
+
+
+void updateUserChatRoomNum(String userID, String roomNum) async{
+  var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
+  var res =
+  await http.post(url, body: {'UserID': userID, 'RoomNum': roomNum});
+  print('聊天室新增結果：${res.body}');
+}
+
 
 class RoomMaxSN {
   final String roomID;
@@ -216,4 +269,23 @@ class ReceivedNotification {
   final String title;
   final String body;
   final String payload;
+}
+
+class ChatUser {
+  String userName;
+  String roomID;
+  String userID;
+  String userImageUrl;
+
+  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
+
+  factory ChatUser.fromJson(dynamic json) {
+    return ChatUser(json['UserName'] as String, json['RoomID'] as String,
+        json['UserID'] as String, json['UserImageUrl'] as String);
+  }
+
+  @override
+  String toString() {
+    return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
+  }
 }

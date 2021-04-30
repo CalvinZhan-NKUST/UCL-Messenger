@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter_msg/screens/HeadShot.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +8,7 @@ import 'package:flutter_msg/screens/Login.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
-import 'package:flutter_msg/ControllerAndroidService.dart' as serviceAndroid;
+import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
 import 'package:flutter_msg/LongPolling.dart' as longPolling;
 
 class PersonalPage extends StatefulWidget {
@@ -334,7 +332,7 @@ class _PersonalPageState extends State<PersonalPage> {
                               print('SaveToken body:${saveToken.body}');
                             }
                             if (io.Platform.isAndroid) {
-                              serviceAndroid.stopService();
+                              callMethodChannel.stopService();
                             }
                             Navigator.push(
                                 context,

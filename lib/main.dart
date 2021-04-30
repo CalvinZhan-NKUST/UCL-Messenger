@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_msg/screens/HomePage.dart';
 import 'package:flutter_msg/screens/BottomNavigation.dart';
-import 'package:flutter_msg/screens/Login.dart';
 
 
 void main() {

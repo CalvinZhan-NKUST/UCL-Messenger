@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' as io;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +8,6 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:url_launcher/url_launcher.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -26,9 +24,6 @@ class _LoginState extends State<Login> {
   static const String _channel = 'sendUserID';
   TextEditingController schoolIDController = new TextEditingController();
   TextEditingController passwordController = new TextEditingController();
-  static const BasicMessageChannel<String> platform =
-      BasicMessageChannel<String>(_channel, StringCodec());
-  String _serverVersion = '';
   int _sendClick = 0;
 
   @override
@@ -53,8 +48,14 @@ class _LoginState extends State<Login> {
   }
 
   Future<void> permissionRequest() async {
-    Map<Permission, PermissionStatus> status =
-        await [Permission.notification].request();
+    Map<Permission, PermissionStatus> status = await [
+      Permission.notification,
+      Permission.camera,
+      Permission.storage,
+      Permission.microphone,
+      Permission.mediaLibrary,
+      Permission.accessMediaLocation
+    ].request();
   }
 
   @override
@@ -213,7 +214,8 @@ class _LoginState extends State<Login> {
                           int.parse(userID), userName, userImageURL, token);
                       DB.insertLocate(1, 'Login');
                       DB.insertRoom(_roomList, _maxSN);
-                      DB.insertRoomList(_roomList, _nameList, _idList, _imageList);
+                      DB.insertRoomList(
+                          _roomList, _nameList, _idList, _imageList);
                       updateUserChatRoomNum(userID);
                       Navigator.of(context).pop();
                       schoolIDController.clear();
@@ -267,11 +269,10 @@ class _LoginState extends State<Login> {
   }
 }
 
-void updateUserChatRoomNum(String userID) async{
+void updateUserChatRoomNum(String userID) async {
   String roomNum = _roomList.length.toString();
   var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
-  var res =
-    await http.post(url, body: {'UserID': userID, 'RoomNum': roomNum});
+  var res = await http.post(url, body: {'UserID': userID, 'RoomNum': roomNum});
   print('聊天室新增結果：${res.body}');
 }
 

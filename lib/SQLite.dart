@@ -34,18 +34,6 @@ void connectDB() async {
   print('Connect Finish');
 }
 
-//void _upgradeDataBase(Database db, int oldVersion, int newVersion) async{
-//  var batch = db.batch();
-//  if (oldVersion == 1) {
-//    _updateTableCompanyV1toV2(batch);
-//  }
-//  await batch.commit();
-//}
-//
-//void _updateTableCompanyV1toV2(Batch batch) {
-//  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
-//}
-
 Future<String> countChatRoomQuantity() async{
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
@@ -82,6 +70,21 @@ void updateLocate(String place) async {
     _notCloseToOften = 0;
 //    await db.close();
   }
+}
+
+Future<List<Locate>> selectLocate() async{
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  final List<Map<String, dynamic>> maps = await db.query('user');
+//  await db.close();
+  return List.generate(maps.length, (i) {
+    return Locate(
+        locateID: maps[i]['Locate'],
+        place: maps[i]['Place']
+    );
+  });
 }
 
 //存入使用者資料
@@ -163,6 +166,7 @@ Future<void> insertRoomList(List roomID, List userName, List userID, List imageL
 
 //存入單一聊天室
 Future<void> insertSingleRoom(String roomID, String userName, String userID, String userImageUrl) async{
+  print('新增單一個聊天室');
   String insertSingleRoom = 'VALUES ';
   insertSingleRoom += '($roomID, \'$userName\', $userID, \'$userImageUrl\')';
   final database = openDatabase(
@@ -252,7 +256,6 @@ Future<void> updateMsgSN(String roomID, String msgSN) async {
   );
   final Database db = await database;
   db.rawUpdate('UPDATE roomsn SET MaxSN=$msgSN WHERE RoomID=$roomID');
-  print('更新所選資訊');
 }
 
 //查詢聊天室編號
@@ -376,5 +379,24 @@ class RoomList {
   @override
   String toString() {
     return '{RoomID: $roomID, UserID: $userID, UserName: $userName, UserImageUrl: $userImageUrl}';
+  }
+}
+
+class Locate {
+  final int locateID;
+  final String place;
+
+  Locate({this.locateID, this.place});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'LocateID':locateID,
+      'Place': place
+    };
+  }
+
+  @override
+  String toString() {
+    return '{LocateID: $locateID, Place: $place}';
   }
 }
