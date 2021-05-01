@@ -78,7 +78,7 @@ class ChatScreenState extends State<ChatScreen> {
 
   void checkFile() {
     _checkFile = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
-      setState(() {});
+      setState((){});
       if (_uploadFilePath != '' && _uploadFileType != '') {
         uploadFile(_uploadFileType, _uploadFilePath);
         _uploadFilePath = '';

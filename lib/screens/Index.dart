@@ -14,24 +14,37 @@ class IndexScreen extends StatefulWidget {
   IndexScreen({Key key}) : super(key: key);
 
   @override
-  _IndexScreenState createState() => _IndexScreenState();
+  IndexScreenState createState() => IndexScreenState();
 }
 
 List<Widget> _roomList = [];
 String _newMsg = '';
+Timer checkChatRoom;
 
-class _IndexScreenState extends State<IndexScreen> {
-  static const String _channel = 'sendUserID';
-  static const BasicMessageChannel<String> platform =
-      BasicMessageChannel<String>(_channel, StringCodec());
+class IndexScreenState extends State<IndexScreen> {
+  
+  void checkRoomNum() {
+    checkChatRoom = new Timer.periodic(Duration(seconds: 1), (Timer timer){
+      setState(() {});
+    });
+  }
+
+  void refreshChatRoomList(){
+    DB.selectUser();
+    DB.selectRoomList();
+    _roomList.clear();
+    makeFriendChatList();
+  }
 
   @override
   void initState() {
     super.initState();
     _roomList.clear();
     makeFriendChatList();
+    checkRoomNum();
     DB.selectUser();
     DB.selectRoomList();
+    DB.updateLocate('Index');
     print('userID:${globalString.GlobalString.userID}');
     print('Index init');
   }
@@ -40,12 +53,21 @@ class _IndexScreenState extends State<IndexScreen> {
   void deactivate() {
     _roomList.clear();
     print('deactivate');
+    if (checkChatRoom!=null){
+      checkChatRoom.cancel();
+      checkChatRoom = null;
+    }
     super.deactivate();
   }
 
-  Future<void> dispose() async {
+  void dispose() {
     _roomList.clear();
+    DB.updateLocate('none');
     print('Index dispose');
+    if (checkChatRoom!=null){
+      checkChatRoom.cancel();
+      checkChatRoom = null;
+    }
     super.dispose();
   }
 
@@ -74,7 +96,6 @@ class _IndexScreenState extends State<IndexScreen> {
     globalString.GlobalString.userName = userInfo.userName;
     globalString.GlobalString.userID = userInfo.userID.toString();
     getMsgPara();
-    setState(() {
       for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
         var room = dataBaseRoomList[i];
         pollingRoomList.add(room.roomID);
@@ -90,7 +111,6 @@ class _IndexScreenState extends State<IndexScreen> {
               userImageUrl: userInfo.userImageURL.toString(),
             ));
       }
-    });
 
     if (io.Platform.isAndroid) {
       callMethodChannel.runService();

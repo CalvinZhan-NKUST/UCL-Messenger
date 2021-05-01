@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter/material.dart';
@@ -78,22 +79,24 @@ class _HomePageState extends State<HomePage> {
     print('title:${payload['aps']['alert']['title']}');
     print('body:${payload['aps']['alert']['body']}');
     print('category:${payload['aps']['category']}');
-    convertCategory(payload['aps']['category'], payload['aps']['alert']['title'].toString(), payload['aps']['alert']['body'].toString());
+
+    convertCategory(payload['aps']['category'].toString(), payload['aps']['alert']['title'].toString(), payload['aps']['alert']['body'].toString());
 
     print('========================');
-    if (payload['aps']['category'].toString() == polling.locateRoomID)
 
     if (name == 'onLaunch') {}
     return Future.value(true);
   }
 
-  void convertCategory(String categoryPayload, String sendName, String sendContent){
+  void convertCategory(String categoryPayload, String sendName, String sendContent) async{
     Map<String, dynamic> categoryData =jsonDecode(categoryPayload);
+    print("執行字串解析");
     print('UserID:${categoryData['UserID']}');
     print('RoomID:${categoryData['RoomID']}');
     print('MsgID:${categoryData['MsgID']}');
     print('MsgID:${categoryData['MsgType']}');
-    callMethodChannel.checkMessageOrNewRoom(categoryData['RoomID'], categoryData['UserID'], sendName, sendContent, categoryData['MsgType'], categoryData['MsgID']);
+    print("字串解析結束");
+    callMethodChannel.checkMessageOrNewRoom(categoryData['RoomID'], categoryData['UserID'], sendName, sendContent, categoryData['MsgType'], int.parse(categoryData['MsgID']));
   }
 
   Future<dynamic> _onBackgroundMessage(Map<String, dynamic> data) =>
@@ -213,7 +216,8 @@ class _HomePageState extends State<HomePage> {
     DB.connectDB();
     getUserInfo();
     polling.checkRoomNum();
-    callMethodChannel.callMethod();
+    if (Platform.isAndroid)
+      callMethodChannel.callMethod();
     return Image.asset('assets/app_icon.png');
   }
 }

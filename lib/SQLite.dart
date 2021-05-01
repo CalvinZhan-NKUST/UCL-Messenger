@@ -50,7 +50,7 @@ Future<void> insertLocate(int locateID, String place) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.execute('INSERT INTO locate VALUES ($locateID, \'$place\')');
+  await db.execute('INSERT INTO locate (LocateID, Place) VALUES ($locateID, \'$place\')');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -64,7 +64,7 @@ void updateLocate(String place) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.execute('UPDATE locate SET Place=$place WHERE LocateID=1');
+  await db.execute('UPDATE locate SET Place=\'$place\' WHERE LocateID=1');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -77,7 +77,7 @@ Future<List<Locate>> selectLocate() async{
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  final List<Map<String, dynamic>> maps = await db.query('user');
+  final List<Map<String, dynamic>> maps = await db.query('locate');
 //  await db.close();
   return List.generate(maps.length, (i) {
     return Locate(

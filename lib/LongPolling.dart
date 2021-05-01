@@ -7,6 +7,7 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/SQLite.dart' as sqlite;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:rxdart/subjects.dart';
+import 'package:flutter_msg/screens/Index.dart' as Index;
 import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
 
 
@@ -161,12 +162,13 @@ Future<void> checkRoomNum() async{
     'UserID':userInfo.userID.toString(),
   });
   Map<String, dynamic> roomNumServer= jsonDecode(response.body);
-  print('Server的聊天室數量：$roomNumServer');
+  print('Server的聊天室數量：${roomNumServer['RoomNum']}');
+
 
   String roomNumClient = await sqlite.countChatRoomQuantity();
   print('Client的聊天室數量：$roomNumClient');
 
-  if ((roomNumServer.toString()) != (roomNumClient.toString())){
+  if ((roomNumServer['RoomNum'].toString()) != (roomNumClient.toString())){
     print('聊天室數量不對');
 
     var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
@@ -187,8 +189,15 @@ Future<void> checkRoomNum() async{
           count++;
         }
       }
-      if (count==0)
+      if (count==0){
         await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(), tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString());
+        print('新增聊天室完成');
+        var locate = await sqlite.selectLocate();
+        var userLocate = locate[0];
+        print('${userLocate.place.toString()}');
+        if (userLocate.place.toString()=='Index')
+          Index.IndexScreenState().refreshChatRoomList();
+      }
       count=0;
     }
     updateUserChatRoomNum(userInfo.userID.toString(), tagObjs.length.toString());
