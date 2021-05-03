@@ -8,7 +8,6 @@ import 'package:media_scanner_scan_file/media_scanner_scan_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter_msg/screens/ChatRoom.dart';
 import 'package:flutter_msg/GlobalVariable.dart';
 
 class CameraHeadShot extends StatefulWidget {
@@ -325,7 +324,6 @@ class _CameraViewHomeState extends State<CameraHeadShot>
           videoController?.dispose();
           videoController = null;
         });
-        uploadVideoAndImage('Image', filePath);
         if (Platform.isAndroid) {
           _scanFile(File(filePath));
         }else{

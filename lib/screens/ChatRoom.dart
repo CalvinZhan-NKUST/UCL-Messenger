@@ -302,6 +302,7 @@ class ChatScreenState extends State<ChatScreen> {
                     Flexible(
                       child: TextField(
                         controller: _chatController,
+                        maxLines: 30,
                         decoration: InputDecoration(
                             contentPadding: EdgeInsets.all(16.0),
                             border: OutlineInputBorder(),
