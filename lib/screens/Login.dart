@@ -285,7 +285,7 @@ class ChatUser {
   ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
 
   factory ChatUser.fromJson(dynamic json) {
-    return ChatUser(json['UserName'] as String, json['RoomID'] as String,
+    return ChatUser(json['UserName'] as String, json['RoomID'].toString() as String,
         json['UserID'] as String, json['UserImageUrl'] as String);
   }
 

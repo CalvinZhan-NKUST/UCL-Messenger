@@ -9,30 +9,85 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 int _notCloseToOften = 0;
 String _dataBase = 'chatroom.db';
 
-//連接資料庫和創建資料表
-void connectDB() async {
-  final createDatabase = openDatabase(
-    join(await getDatabasesPath(), _dataBase),
-    onCreate: (db, version) {
-      print('進行資料表user建置');
-      db.execute(
-          'CREATE TABLE IF NOT EXISTS user(UserID INTEGER PRIMARY KEY, Name TEXT, UserImageURL TEXT, Token TEXT);');
-      print('進行資料表locate建置');
-      db.execute(
-          'CREATE TABLE IF NOT EXISTS locate(LocateID INTEGER PRIMARY KEY, Place TEXT);');
-      print('進行資料表roomsn建置');
-      db.execute(
-          'CREATE TABLE IF NOT EXISTS roomsn(RoomID INTEGER PRIMARY KEY, MaxSN INTEGER);');
-      print('進行資料表roomList建置');
-      db.execute(
-          'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER, UserImageUrl TEXT);');
-      return;
-    },
-//    onUpgrade: _upgradeDataBase,
-    version: 2,
-  );
-  print('Connect Finish');
+connectDB() async {
+  var databasesPath = await getDatabasesPath();
+  String path = join(databasesPath, _dataBase);
+  var ourDb = await openDatabase(path,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+      onDowngrade: onDatabaseDowngradeDelete);
+  return ourDb;
 }
+
+//创建数据库表
+void _onCreate(Database db, int version) async {
+  var batch = db.batch();
+  _createTableCompanyV1(batch);
+  _updateTableCompanyV1toV2(batch);
+
+  await batch.commit();
+  print("Table is created");
+}
+
+void _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  var batch = db.batch();
+  if (oldVersion == 1) {
+    _updateTableCompanyV1toV2(batch);
+  }
+  await batch.commit();
+}
+
+//創建DB--初始版本
+void _createTableCompanyV1(Batch batch) {
+  batch.execute(
+    'CREATE TABLE IF NOT EXISTS user(UserID INTEGER PRIMARY KEY, Name TEXT, UserImageURL TEXT, Token TEXT);',
+  );
+  batch.execute(
+    'CREATE TABLE IF NOT EXISTS locate(LocateID INTEGER PRIMARY KEY, Place TEXT);',
+  );
+  batch.execute(
+    'CREATE TABLE IF NOT EXISTS roomsn(RoomID INTEGER PRIMARY KEY, MaxSN INTEGER);',
+  );
+  batch.execute(
+    'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER);',
+  );
+}
+
+//更新DB Version: 1->2.
+void _updateTableCompanyV1toV2(Batch batch) {
+  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
+}
+
+
+//連接資料庫和創建資料表
+//void connectDB() async {
+//  final createDatabase = openDatabase(
+//    join(await getDatabasesPath(), _dataBase),
+//  onCreate: (db, version) {
+//      print('進行資料表user建置');
+//      db.execute(
+//          'CREATE TABLE IF NOT EXISTS user(UserID INTEGER PRIMARY KEY, Name TEXT, UserImageURL TEXT, Token TEXT);');
+//      print('進行資料表locate建置');
+//      db.execute(
+//          'CREATE TABLE IF NOT EXISTS locate(LocateID INTEGER PRIMARY KEY, Place TEXT);');
+//      print('進行資料表roomsn建置');
+//      db.execute(
+//          'CREATE TABLE IF NOT EXISTS roomsn(RoomID INTEGER PRIMARY KEY, MaxSN INTEGER);');
+//      print('進行資料表roomList建置');
+//      db.execute(
+//          'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER, UserImageUrl TEXT);');
+//      return;
+//    },
+////  onUpgrade: _updateTableCompanyV1toV2(batch),
+//    version: 2,
+//  );
+//  print('Connect Finish');
+//}
+//
+//void _updateTableCompanyV1toV2(Batch batch) {
+//  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
+//}
 
 Future<String> countChatRoomQuantity() async{
   final database = openDatabase(
