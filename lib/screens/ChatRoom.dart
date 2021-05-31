@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:retry/retry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:flutter_msg/screens/CameraView.dart';
@@ -332,22 +333,36 @@ class ChatScreenState extends State<ChatScreen> {
     print(_recentRoomID);
     print(_mainUserID);
     print(_mainUserName);
-    var url = '${globalString.GlobalString.ipRedis}/send';
-    var response = await http.post(url, body: {
-      'RoomID': _recentRoomID,
-      'SendUserID': _mainUserID,
-      'SendName': _mainUserName,
-      'ReceiveName': _friendName,
-      'ReceiveUserID': _friendID,
-      'Text': '$content',
-      'MsgType': '$msgType',
-      'DateTime': '${DateTime.now().millisecondsSinceEpoch}'
-    });
+
     Map<String, dynamic> resVersion;
-    resVersion = jsonDecode(response.body);
-    print('Response body:${resVersion['MsgID']}');
-    print(content);
-    await DB.updateMsgSN(_recentRoomID, resVersion['MsgID'].toString());
+
+    try {
+      final statusCode = await retry(
+          () async{
+            var url = '${globalString.GlobalString.ipRedis}/send';
+            var response = await http.post(url, body: {
+              'RoomID': _recentRoomID,
+              'SendUserID': _mainUserID,
+              'SendName': _mainUserName,
+              'ReceiveName': _friendName,
+              'ReceiveUserID': _friendID,
+              'Text': '$content',
+              'MsgType': '$msgType',
+              'DateTime': '${DateTime
+                  .now()
+                  .millisecondsSinceEpoch}'
+            }).timeout(Duration(seconds: 10));
+            resVersion = jsonDecode(response.body);
+            print('Response body:${resVersion['MsgID']}');
+            print(content);
+          },
+          retryIf: (e) => e is TimeoutException,
+      );
+      await DB.updateMsgSN(_recentRoomID, resVersion['MsgID'].toString());
+      print('連線結果：${statusCode.toString()}');
+    } finally{
+        print('finally');
+    }
   }
 }
 

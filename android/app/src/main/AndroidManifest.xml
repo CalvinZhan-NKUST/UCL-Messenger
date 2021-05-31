@@ -26,7 +26,9 @@
             android:enabled="true"
             android:exported="true"/>
         <service
-            android:name="org.eclipse.paho.android.service.MqttService" />
+            android:name="org.eclipse.paho.android.service.MqttService"
+            android:enabled="true"
+            android:exported="true"/>
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"

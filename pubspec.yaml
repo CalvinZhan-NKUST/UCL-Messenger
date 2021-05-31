@@ -47,6 +47,7 @@ dependencies:
   media_scanner_scan_file: ^0.0.2
   percent_indicator: ^3.0.1
   gallery_saver: ^2.0.0
+  retry: ^3.1.0
 
 dev_dependencies:
   flutter_test:

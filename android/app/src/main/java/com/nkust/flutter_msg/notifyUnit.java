@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
@@ -39,9 +38,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.plugin.common.MethodCall;
-import io.flutter.plugin.common.MethodChannel;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -55,6 +51,7 @@ public class notifyUnit extends Service {
     private final static String Table_Column = "MaxSN";
     private Context context = this;
     private Timer timer = new Timer();
+    private Timer reconnectTimer = new Timer();
     private Integer count = 0;
     private String roomList = "";
     public static Integer serviceStart = 0;
@@ -125,7 +122,7 @@ public class notifyUnit extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        string str = new string();
+        globalVariable str = new globalVariable();
         String getIP = str.getIP();
         Log.d("Demo", "onStartCommand");
         Log.d("Demo", "serviceStart:" + serviceStart);
@@ -202,9 +199,10 @@ public class notifyUnit extends Service {
         client = new MqttAndroidClient(context, uri, clientID);
         client.setCallback(mqttCallback);
         conOpt = new MqttConnectOptions();
-        conOpt.setCleanSession(true);
+        conOpt.setAutomaticReconnect(true);
+        conOpt.setCleanSession(false);
         conOpt.setConnectionTimeout(10);
-        conOpt.setKeepAliveInterval(30);
+        conOpt.setKeepAliveInterval(60);
         conOpt.setUserName(userName);
         conOpt.setPassword(passWord.toCharArray());
 
@@ -222,7 +220,6 @@ public class notifyUnit extends Service {
                 iMqttActionListener.onFailure(null, e);
             }
         }
-
         if (doConnect) {
             doClientConnection();
         }
@@ -285,7 +282,7 @@ public class notifyUnit extends Service {
         @Override
         public void connectionLost(Throwable arg0) {
             Log.d("MQTT", "Connection Lost:" + arg0);
-            mqttInit();
+//            client.unregisterResources();
         }
     };
 
@@ -410,7 +407,7 @@ public class notifyUnit extends Service {
     }
 
     public void getNewMsg(String roomID, String msgSN, Integer msgPara) {
-        string str = new string();
+        globalVariable str = new globalVariable();
         String getIP = str.getIP();
 
         OkHttpClient getMsgClient = new OkHttpClient().newBuilder().build();
@@ -475,11 +472,13 @@ public class notifyUnit extends Service {
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
-        try {
-            client.disconnect();
-            client.unregisterResources();
-        } catch (MqttException e) {
-            e.printStackTrace();
+        if (client!=null){
+            try {
+                client.disconnect();
+                client.unregisterResources();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
         }
         super.onDestroy();
     }

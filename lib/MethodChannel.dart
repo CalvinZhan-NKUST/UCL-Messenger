@@ -24,13 +24,6 @@ Future<void> stopService() async {
     print('This is iOS device.');
   }
 }
-//
-//Future<void> getMessageFromNative() async {
-//  var methodChannel = MethodChannel("com.flutter.getMessage");
-//  final String result = await methodChannel.invokeMethod('newMessage');
-//  print('取得訊息Service:$result');
-////  chat.setNewMsg(roomID, userID, name, text, msgType, msgID);
-//}
 
 void callMethod(){
   var _methodChannel = MethodChannel('com.flutter.getMessage');
