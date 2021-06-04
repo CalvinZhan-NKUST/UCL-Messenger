@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:retry/retry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:flutter_msg/screens/CameraView.dart';
@@ -10,6 +10,7 @@ import 'package:flutter_msg/screens/ImageView.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
+
 import 'package:video_player/video_player.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 
@@ -79,7 +80,7 @@ class ChatScreenState extends State<ChatScreen> {
 
   void checkFile() {
     _checkFile = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
-      setState((){});
+      setState(() {});
       if (_uploadFilePath != '' && _uploadFileType != '') {
         uploadFile(_uploadFileType, _uploadFilePath);
         _uploadFilePath = '';
@@ -101,7 +102,7 @@ class ChatScreenState extends State<ChatScreen> {
 
   Future<void> _checkMsg(String msgUrl) async {
     print('checkMsg $_recentRoomID');
-    var response = await http.post(msgUrl, body: {
+    var response = await http.post(Uri.parse(msgUrl), body: {
       'RoomID': _recentRoomID,
       'MsgID': '0',
       'MsgPara': globalString.GlobalString.msgPara
@@ -140,8 +141,8 @@ class ChatScreenState extends State<ChatScreen> {
 
   void setHistoryMessage(String msgSN) async {
     _nextSN = int.parse(msgSN) - 10;
-    var response = await http
-        .post(_msgHistory, body: {'MsgID': msgSN, 'RoomID': widget.roomID});
+    var response = await http.post(Uri.parse(_msgHistory),
+        body: {'MsgID': msgSN, 'RoomID': widget.roomID});
     historyMsg = jsonDecode(response.body);
     var hisMsgJson = jsonDecode(response.body)['res'] as List;
     List<Messenger> hisObjs =
@@ -176,16 +177,12 @@ class ChatScreenState extends State<ChatScreen> {
                   text: text, send: userName, image: _mainUserImageUrl));
           break;
         case 'Image':
-          _messages.insert(
-              insertPosition,
-              ImageSend(
-                  text: text, send: userName, image: _mainUserImageUrl));
+          _messages.insert(insertPosition,
+              ImageSend(text: text, send: userName, image: _mainUserImageUrl));
           break;
         case 'Video':
-          _messages.insert(
-              insertPosition,
-              VideoSend(
-                  text: text, send: userName, image: _mainUserImageUrl));
+          _messages.insert(insertPosition,
+              VideoSend(text: text, send: userName, image: _mainUserImageUrl));
           break;
       }
     } else {
@@ -203,16 +200,12 @@ class ChatScreenState extends State<ChatScreen> {
                   text: text, send: userName, image: _friendImageUrl));
           break;
         case 'Image':
-          _messages.insert(
-              insertPosition,
-              ImageReceive(
-                  text: text, send: userName, image: _friendImageUrl));
+          _messages.insert(insertPosition,
+              ImageReceive(text: text, send: userName, image: _friendImageUrl));
           break;
         case 'Video':
-          _messages.insert(
-              insertPosition,
-              VideoReceive(
-                  text: text, send: userName, image: _friendImageUrl));
+          _messages.insert(insertPosition,
+              VideoReceive(text: text, send: userName, image: _friendImageUrl));
           break;
       }
     }
@@ -326,42 +319,54 @@ class ChatScreenState extends State<ChatScreen> {
         )));
   }
 
+  int sendTime = 0;
+
   Future<void> _submitText(String msgType, String content) async {
     insertMessageWidget(_mainUserID, msgType, _mainUserName, content, 0);
     if (msgType == 'Text') _chatController.clear();
 
-    print(_recentRoomID);
-    print(_mainUserID);
-    print(_mainUserName);
-
-    Map<String, dynamic> resVersion;
+//    print(_recentRoomID);
+//    print(_mainUserID);
+//    print(_mainUserName);
 
     try {
-      final statusCode = await retry(
-          () async{
-            var url = '${globalString.GlobalString.ipRedis}/send';
-            var response = await http.post(url, body: {
-              'RoomID': _recentRoomID,
-              'SendUserID': _mainUserID,
-              'SendName': _mainUserName,
-              'ReceiveName': _friendName,
-              'ReceiveUserID': _friendID,
-              'Text': '$content',
-              'MsgType': '$msgType',
-              'DateTime': '${DateTime
-                  .now()
-                  .millisecondsSinceEpoch}'
-            }).timeout(Duration(seconds: 10));
-            resVersion = jsonDecode(response.body);
-            print('Response body:${resVersion['MsgID']}');
-            print(content);
-          },
-          retryIf: (e) => e is TimeoutException,
-      );
-      await DB.updateMsgSN(_recentRoomID, resVersion['MsgID'].toString());
-      print('連線結果：${statusCode.toString()}');
-    } finally{
-        print('finally');
+      sendTime++;
+      print('執行訊息傳送，時間：${DateTime.now().minute}分${DateTime.now().second}秒');
+      Map<String, dynamic> resVersion;
+      var url = '${globalString.GlobalString.ipRedis}/send';
+      var request = http.MultipartRequest('POST', Uri.parse(url));
+      request.fields.addAll({
+        'RoomID': _recentRoomID,
+        'SendUserID': _mainUserID,
+        'SendName': _mainUserName,
+        'ReceiveName': _friendName,
+        'ReceiveUserID': _friendID,
+        'Text': '$content',
+        'MsgType': '$msgType',
+        'DateTime': '${DateTime.now().millisecondsSinceEpoch}'
+      });
+      http.StreamedResponse response =
+          await request.send().timeout(Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        resVersion = jsonDecode(await response.stream.bytesToString());
+        print('Response body:${resVersion['MsgID']}');
+        print(content);
+        await DB.updateMsgSN(_recentRoomID, resVersion['MsgID'].toString());
+        sendTime = 0;
+      } else {
+        print(response.statusCode.toString());
+        print(response.reasonPhrase);
+      }
+    } on TimeoutException catch (e) {
+      print('timeout error:$e');
+      print('重傳開始的時間：${DateTime.now().minute}分${DateTime.now().second}秒\n');
+      if (sendTime < 4) _submitText(msgType, content);
+    } on SocketException catch (e) {
+      print('socket error:$e');
+      print('重傳開始的時間：${DateTime.now().minute}分${DateTime.now().second}秒\n');
+      if (sendTime < 4) _submitText(msgType, content);
+    } finally {
+      print('finally');
     }
   }
 }

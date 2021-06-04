@@ -325,7 +325,7 @@ class _PersonalPageState extends State<PersonalPage> {
                             if (io.Platform.isIOS) {
                               var tokenURL =
                                   '${globalString.GlobalString.ipRedis}/saveToken';
-                              var saveToken = await http.post(tokenURL, body: {
+                              var saveToken = await http.post(Uri.parse(tokenURL), body: {
                                 'UserID': globalString.GlobalString.userID,
                                 'Token': 'none'
                               });
@@ -356,7 +356,7 @@ class _PersonalPageState extends State<PersonalPage> {
   updateUserInfoServer(int userID, String userName) async {
     String _updateUserNameUrl =
         '${globalString.GlobalString.ipMysql}/updateUserName';
-    var responseChangeResult = await http.post(_updateUserNameUrl,
+    var responseChangeResult = await http.post(Uri.parse(_updateUserNameUrl),
         body: {'UserID': userID.toString(), 'UserName': userName});
     var res = responseChangeResult.body.toString();
     print('更換結果：$res');
@@ -401,7 +401,7 @@ class _PersonalPageState extends State<PersonalPage> {
     print('進行密碼修改');
     String _updateUserPasswordUrl =
         '${globalString.GlobalString.ipMysql}/updateUserPassword';
-    var responsePasswordResult = await http.post(_updateUserPasswordUrl, body: {
+    var responsePasswordResult = await http.post(Uri.parse(_updateUserPasswordUrl), body: {
       'UserID': userID.toString(),
       'oldPassword': oldPassword,
       'newPassword': newPassword
@@ -459,7 +459,7 @@ class _PersonalPageState extends State<PersonalPage> {
   uploadUserImage(String userID, String imageUrl) async {
     String _updateUserPasswordUrl =
         '${globalString.GlobalString.ipMysql}/uploadUserImage';
-    var responsePasswordResult = await http.post(_updateUserPasswordUrl, body: {
+    var responsePasswordResult = await http.post(Uri.parse(_updateUserPasswordUrl), body: {
       'UserID': userID,
       'UserImageUrl': imageUrl,
     });

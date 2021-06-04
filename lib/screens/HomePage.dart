@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
       if (io.Platform.isIOS) {
         var tokenURL = '${globalString.GlobalString.ipRedis}/saveToken';
         var saveToken = await http
-            .post(tokenURL, body: {'UserID': userID, 'Token': _token});
+            .post(Uri.parse(tokenURL), body: {'UserID': userID, 'Token': _token});
         print('SaveToken body:${saveToken.body}');
       }
     });
@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
     String _checkUrl = '${globalString.GlobalString.ipMysql}/getVersionCode';
     Map<String, dynamic> resVersion;
 
-    var responseVersion = await http.post(_checkUrl);
+    var responseVersion = await http.post(Uri.parse(_checkUrl));
     resVersion = jsonDecode(responseVersion.body);
     print(
         'Server:${resVersion['NowVersion']},Client:${globalString.GlobalString.appVersion}');
@@ -165,7 +165,7 @@ class _HomePageState extends State<HomePage> {
       var _url = '${globalString.GlobalString.ipRedis}/keepLogin';
       print(
           'send uuid UserID:${userInfo.userID.toString()}, Token:${userInfo.token}');
-      var response = await http.post(_url,
+      var response = await http.post(Uri.parse(_url),
           body: {'UserID': userInfo.userID.toString(), 'uuid': userInfo.token});
       print('Response body:${response.body}');
       res = jsonDecode(response.body);

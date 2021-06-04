@@ -106,7 +106,7 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
     });
     var userInfo = _dataBaseUserInfo[0];
     String url = '${globalString.GlobalString.ipMysql}/searchUser';
-    var response = await http.post(url,
+    var response = await http.post(Uri.parse(url),
         body: {'searchValue': inputText, 'UserID': userInfo.userID.toString()});
     print(response.body);
 
@@ -211,7 +211,7 @@ class FriendSearchList extends StatelessWidget {
       String _newRoomID ='';
       String _userList = userID + ',' + userInfo.userID.toString() + ',';
       String url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
-      var response = await http.post(url,
+      var response = await http.post(Uri.parse(url),
           body: {'UserID':userInfo.userID.toString(),'UserIDList': _userList, 'RoomType': '1', 'RoomName':'none'});
       _newRoomID = response.body.toString();
       print('RoomID:'+_newRoomID);

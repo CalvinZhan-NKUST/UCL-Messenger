@@ -134,7 +134,7 @@ class _FriendList extends State<FriendList> {
     if (userIDList != '' && pass == true) {
       userIDList += '${_dataBaseUserInfo[0].userID.toString()},';
       var url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
-      var response = await http.post(url, body: {
+      var response = await http.post(Uri.parse(url), body: {
         'UserID':_dataBaseUserInfo[0].userID.toString(),
         'UserIDList': userIDList,
         'RoomType': '2',

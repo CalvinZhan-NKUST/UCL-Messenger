@@ -124,6 +124,7 @@ public class notifyUnit extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         globalVariable str = new globalVariable();
         String getIP = str.getIP();
+
         Log.d("Demo", "onStartCommand");
         Log.d("Demo", "serviceStart:" + serviceStart);
         Log.d("Demo", getIP + "/notify");
@@ -137,6 +138,7 @@ public class notifyUnit extends Service {
                 while (cursor.moveToNext()) {
                     int roomID = cursor.getInt(cursor.getColumnIndex("RoomID"));
                     int maxSN = cursor.getInt(cursor.getColumnIndex("MaxSN"));
+                    saveClientSN(Integer.roomID, Integer.maxSN);
                     Log.d("Demo", "onCommand 查詢結果：RoomID=" + roomID + ",MaxSN=" + maxSN);
                 }
 
@@ -173,7 +175,6 @@ public class notifyUnit extends Service {
                                 String roomServer = jsonObject.getString("RoomID");
                                 String snServer = jsonObject.getString("MaxSN");
                                 if (setClientCount == 0) {
-                                    saveClientSN(Integer.parseInt(roomServer), Integer.parseInt(snServer));
                                     saveMaxSN(Integer.parseInt(roomServer), Integer.parseInt(snServer));
                                 } else {
                                     Log.d("Demo", "res to compare, roomOnServer:" + roomServer + ", snOnServer" + snServer);
@@ -392,14 +393,17 @@ public class notifyUnit extends Service {
     }
 
     public void compareSN(Integer roomID, Integer serverSN) {
-        Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN);
+        Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN + ",clientSN:"+clientMsgSN.get(roomID.toString()));
         if (Integer.parseInt(clientMsgSN.get(roomID.toString())) < serverSN) {
             saveClientSN(roomID, serverSN);
             String getSN = String.valueOf(Integer.parseInt(clientMsgSN.get(roomID.toString())) - 1);
+            Log.d("Demo","需要取得訊息，訊息編號為："+getSN);
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    int msgPara = serverSN - Integer.parseInt(clientMsgSN.get(roomID.toString()));
+                    Log.d("Demo","開始取得新訊息");
+                    int msgPara = serverSN - Integer.parseInt(getSN);
+                    Log.d("Demo",serverSN+" , "+clientMsgSN.get(roomID.toString())+" , "+roomID.toString()+" , "+getSN+" , "+msgPara);
                     getNewMsg(roomID.toString(), getSN, msgPara);
                 }
             }).start();
@@ -409,6 +413,7 @@ public class notifyUnit extends Service {
     public void getNewMsg(String roomID, String msgSN, Integer msgPara) {
         globalVariable str = new globalVariable();
         String getIP = str.getIP();
+        Log.d("Demo",getIP+"/getMsg");
 
         OkHttpClient getMsgClient = new OkHttpClient().newBuilder().build();
         FormBody formBody = new FormBody.Builder()

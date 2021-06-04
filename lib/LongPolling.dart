@@ -87,7 +87,7 @@ void longPolling(String roomNotify) {
     _pollingTimer = new Timer.periodic(period, (Timer timer) async {
       checkRoomNum();
       var url = '${globalString.GlobalString.ipRedis}/notify';
-      var response = await http.post(url, body: {'RoomIDList': roomNotify});
+      var response = await http.post(Uri.parse(url), body: {'RoomIDList': roomNotify});
       print('LongPolling response body:${response.body}');
       var tagObjsJson = jsonDecode(response.body)['res'] as List;
       List<RoomMaxSN> tagObjs =
@@ -128,7 +128,7 @@ class CompareMaxSN {
 Future<void> getNewestMsg(String roomID, String msgID, String msgPara) async {
   int _sendID = int.parse(msgID) + 1;
   var url = '${globalString.GlobalString.ipRedis}/getMsg';
-  var response = await http.post(url,
+  var response = await http.post(Uri.parse(url),
       body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': msgPara});
   print('Response body in getNewMsg:${response.body}');
   var tagObjsJson = jsonDecode(response.body)['res'] as List;
@@ -158,7 +158,7 @@ Future<void> checkRoomNum() async{
   dataBaseUserInfo = await sqlite.selectUser();
   var userInfo = dataBaseUserInfo[0];
   var url = '${globalString.GlobalString.ipRedis}/getRoomNum';
-  var response = await http.post(url, body:{
+  var response = await http.post(Uri.parse(url), body:{
     'UserID':userInfo.userID.toString(),
   });
   Map<String, dynamic> roomNumServer= jsonDecode(response.body);
@@ -173,7 +173,7 @@ Future<void> checkRoomNum() async{
 
     var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
     var chatRoom = await http
-        .post(roomURL, body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
+        .post(Uri.parse(roomURL), body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
     print('Response body:${chatRoom.body}');
     var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
     List<ChatUser> tagObjs = tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
@@ -208,7 +208,7 @@ Future<void> checkRoomNum() async{
 void updateUserChatRoomNum(String userID, String roomNum) async{
   var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
   var res =
-  await http.post(url, body: {'UserID': userID, 'RoomNum': roomNum});
+  await http.post(Uri.parse(url), body: {'UserID': userID, 'RoomNum': roomNum});
   print('聊天室新增結果：${res.body}');
 }
 

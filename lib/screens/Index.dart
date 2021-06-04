@@ -75,7 +75,7 @@ class IndexScreenState extends State<IndexScreen> {
     var url = '${globalString.GlobalString.ipMysql}/getConfigPara';
     print(url);
     var response = await http
-        .post(url, body: {'UserID': globalString.GlobalString.userID});
+        .post(Uri.parse(url), body: {'UserID': globalString.GlobalString.userID});
     print('getConfigPara body:${response.body}');
     res = jsonDecode(response.body);
     print(res['MsgPara']);
