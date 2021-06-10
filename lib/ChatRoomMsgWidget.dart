@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:flutter_msg/screens/VideoView.dart';
@@ -11,7 +10,8 @@ class MessageSend extends StatefulWidget {
   final String send;
   final String image;
 
-  MessageSend({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  MessageSend({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _MessageSendState createState() => _MessageSendState();
 }
@@ -38,7 +38,7 @@ class _MessageSendState extends State<MessageSend> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -57,7 +57,7 @@ class _MessageSendState extends State<MessageSend> {
                       action: SnackBarAction(
                           label: '確定', onPressed: scaffold.hideCurrentSnackBar),
                     ));
-                    sendReport(widget.roomID ,widget.send, widget.text);
+                    sendReport(widget.roomID, widget.send, widget.text);
                   },
                 )),
 //            PopupMenuDivider(),  //這是分隔線
@@ -109,7 +109,8 @@ class ImageSend extends StatefulWidget {
   final String send;
   final String image;
 
-  ImageSend({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  ImageSend({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _ImageSendState createState() => _ImageSendState();
 }
@@ -139,7 +140,7 @@ class _ImageSendState extends State<ImageSend> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -212,7 +213,8 @@ class VideoSend extends StatefulWidget {
   final String send;
   final String image;
 
-  VideoSend({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  VideoSend({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _VideoSendState createState() => _VideoSendState();
 }
@@ -253,7 +255,7 @@ class _VideoSendState extends State<VideoSend> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -298,9 +300,9 @@ class _VideoSendState extends State<VideoSend> {
                     padding: EdgeInsets.all(10.0),
                     child: _controller.value.isInitialized
                         ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
+                            aspectRatio: _controller.value.aspectRatio,
+                            child: VideoPlayer(_controller),
+                          )
                         : Container(),
                   )),
             ),
@@ -328,7 +330,8 @@ class MessageReceive extends StatefulWidget {
   final String roomID;
   final String image;
 
-  MessageReceive({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  MessageReceive({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _MessageReceiveState createState() => _MessageReceiveState();
 }
@@ -355,7 +358,7 @@ class _MessageReceiveState extends State<MessageReceive> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -429,7 +432,8 @@ class ImageReceive extends StatefulWidget {
   final String image;
   final String roomID;
 
-  ImageReceive({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  ImageReceive({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _ImageReceiveState createState() => _ImageReceiveState();
 }
@@ -459,7 +463,7 @@ class _ImageReceiveState extends State<ImageReceive> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -535,7 +539,8 @@ class VideoReceive extends StatefulWidget {
   final String roomID;
   final String image;
 
-  VideoReceive({Key key, this.text, this.send, this.image, this.roomID}) : super(key: key);
+  VideoReceive({Key key, this.text, this.send, this.image, this.roomID})
+      : super(key: key);
 
   _VideoReceiveState createState() => _VideoReceiveState();
 }
@@ -575,7 +580,7 @@ class _VideoReceiveState extends State<VideoReceive> {
       onLongPressStart: (detail) {
         RenderBox renderBox = anchorKey.currentContext.findRenderObject();
         var offset =
-        renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
+            renderBox.localToGlobal(Offset(0.0, renderBox.size.height));
         showMenu(
           context: context,
           position: RelativeRect.fromLTRB(detail.globalPosition.dx, offset.dy,
@@ -634,9 +639,9 @@ class _VideoReceiveState extends State<VideoReceive> {
                     padding: EdgeInsets.all(10.0),
                     child: _controller.value.isInitialized
                         ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
+                            aspectRatio: _controller.value.aspectRatio,
+                            child: VideoPlayer(_controller),
+                          )
                         : Container(),
                   )),
             ),
@@ -657,4 +662,3 @@ void sendReport(String roomID, String send, String text) async {
   await FlutterEmailSender.send(email);
   print('Email寄出');
 }
-

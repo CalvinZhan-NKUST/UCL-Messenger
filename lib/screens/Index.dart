@@ -29,10 +29,10 @@ class IndexScreenState extends State<IndexScreen> {
     });
   }
 
-  void refreshChatRoomList(){
-    DB.selectUser();
-    DB.selectRoomList();
-    _roomList.clear();
+  void refreshChatRoomList() async{
+    print('重新整理聊天室清單');
+    await DB.selectUser();
+    await DB.selectRoomList();
     makeFriendChatList();
   }
 
@@ -45,19 +45,7 @@ class IndexScreenState extends State<IndexScreen> {
     DB.selectUser();
     DB.selectRoomList();
     DB.updateLocate('Index');
-    print('userID:${globalString.GlobalString.userID}');
     print('Index init');
-  }
-
-  @override
-  void deactivate() {
-    _roomList.clear();
-    print('deactivate');
-    if (checkChatRoom!=null){
-      checkChatRoom.cancel();
-      checkChatRoom = null;
-    }
-    super.deactivate();
   }
 
   void dispose() {
@@ -72,6 +60,7 @@ class IndexScreenState extends State<IndexScreen> {
   }
 
   void getMsgPara() async {
+    print('userID:${globalString.GlobalString.userID}');
     var url = '${globalString.GlobalString.ipMysql}/getConfigPara';
     print(url);
     var response = await http
@@ -88,6 +77,11 @@ class IndexScreenState extends State<IndexScreen> {
     var dataBaseUserInfo = new List();
     var pollingRoomList = new List();
 
+    dataBaseRoomList.clear();
+    dataBaseUserInfo.clear();
+    pollingRoomList.clear();
+    _roomList.clear();
+
     print('從DB撈出來的清單：${await DB.selectRoomList()}');
     dataBaseRoomList = await DB.selectRoomList();
 
@@ -99,6 +93,7 @@ class IndexScreenState extends State<IndexScreen> {
       for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
         var room = dataBaseRoomList[i];
         pollingRoomList.add(room.roomID);
+        print('Updating new room list.');
         _roomList.insert(
             0,
             RecentChat(

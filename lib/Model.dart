@@ -215,6 +215,66 @@ class Locate {
   }
 }
 
+class MessageUpdate {
+  final int roomMsgSN;
+  final int roomID;
+  final int sendUserID;
+  final int receiveUserID;
+  final String sendName;
+  final String receiveName;
+  final String text;
+  final String msgType;
+  final String dateTime;
+  final String updateProcess;
+
+  MessageUpdate({
+      this.roomMsgSN,
+      this.roomID,
+      this.sendUserID,
+      this.sendName,
+      this.receiveName,
+      this.receiveUserID,
+      this.msgType,
+      this.text,
+      this.dateTime,
+      this.updateProcess});
+
+//  factory MessengerUpdate.fromJson(dynamic json) {
+//    return MessengerUpdate(
+//        json['RoomMsgSN'] as int,
+//        json['RoomID'] as int,
+//        json['SendUserID'] as int,
+//        json['SendName'] as String,
+//        json['ReceiveName'] as String,
+//        json['ReceiveUserID'] as int,
+//        json['MsgType'] as String,
+//        json['Text'] as String,
+//        json['DateTime'] as String,
+//        json['UpdateProcess'] as String);
+//  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'roomMsgSN': roomMsgSN,
+      'roomID':roomID,
+      'sendUserID': sendUserID,
+      'sendName': sendName,
+      'receiveUserID': receiveUserID,
+      'receiveName':receiveName,
+      'msgType':msgType,
+      'text':text,
+      'dateTime':dateTime,
+      'updateProcess':updateProcess
+    };
+  }
+
+  @override
+  String toString() {
+    return '{ $roomMsgSN, $roomID, $sendUserID, $sendName, $receiveName, '
+        '$receiveUserID, $msgType, $text, $dateTime, $updateProcess }';
+  }
+}
+
 class FriendResult {
   int userID;
   String userName;
@@ -233,5 +293,3 @@ class FriendResult {
     return '{ ${this.userID}, ${this.userName}, ${this.account}, ${this.userImgURL}}';
   }
 }
-
-

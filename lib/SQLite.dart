@@ -58,16 +58,94 @@ void _createTableCompanyV1(Batch batch) {
 void _updateTableCompanyV1toV2(Batch batch) {
   batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
   batch.execute('ALTER TABLE roomList ADD LastMsgTime TEXT');
+  batch.execute(
+      'CREATE TABLE IF NOT EXISTS msgUpdate(MsgID INTEGER AUTOINCREMENT PRIMARY KEY, RoomMsgSN INTEGER, RoomID INTEGER,'
+      'SendUserID INTEGER, SendName TEXT, ReceiveName TEXT, ReceiveUserID INTEGER, Text TEXT, MsgType TEXT, DateTime TEXT, UpdateProcess TEXT)');
 }
 
-Future<String> countChatRoomQuantity() async{
+Future<void> insertNewUpdateMsg(
+    int roomMsgSN,
+    int roomID,
+    int sendUserID,
+    String sendName,
+    String receiveName,
+    int receiveUserID,
+    String text,
+    String msgType,
+    String dateTime,
+    String updateProcess) async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  int count = Sqflite
-      .firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM roomList'));
+  await db.execute(
+      'INSERT INTO msgUpdate (RoomMsgSN,RoomID,SendUserID,SendName,ReceiveName,ReceiveUserID,Text,MsgType,DateTime,UpdateProcess) '
+      'VALUES ($roomMsgSN, $roomID, $sendUserID, \'$sendName\', \'$receiveName\', $receiveUserID, \'$text\', \'$msgType\', \'$dateTime\', \'$updateProcess\')');
+}
+
+//查詢目前聊天室的數量
+Future<String> countChatRoomQuantity() async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  int count =
+      Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM roomList'));
   return '$count';
+}
+
+//查詢目前訊息編號的訊息
+Future<List<MessageUpdate>> selectUpdateMsgSN(String roomID) async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  final List<Map<String, dynamic>> maps = await db.rawQuery(
+      'select * from msgInfo where RoomID=$roomID and order by RoomMsgSN limit 1');
+  return List.generate(maps.length, (i) {
+    return MessageUpdate(
+        roomMsgSN: maps[i]['RoomMsgSN'],
+        roomID: maps[i]['RoomID'],
+        sendUserID: maps[i]['SendUserID'],
+        receiveUserID: maps[i]['ReceiveUserID'],
+        sendName: maps[i]['SendName'],
+        receiveName: maps[i]['ReceiveName'],
+        text: maps[i]['Text'],
+        msgType: maps[i]['MsgType'],
+        dateTime: maps[i]['DateTime'],
+        updateProcess: maps[i]['UpdateProcess']);
+  });
+}
+
+//查詢未上傳的訊息
+Future<List<MessageUpdate>> selectUpdateMsg(String roomID) async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  final List<Map<String, dynamic>> maps = await db.rawQuery(
+      'select * from msgInfo where RoomID=$roomID and UpdateProcess=\'unprocessed\' order by RoomMsgSN desc');
+  return List.generate(maps.length, (i) {
+    return MessageUpdate(
+        roomMsgSN: maps[i]['RoomMsgSN'],
+        roomID: maps[i]['RoomID'],
+        sendUserID: maps[i]['SendUserID'],
+        receiveUserID: maps[i]['ReceiveUserID'],
+        sendName: maps[i]['SendName'],
+        receiveName: maps[i]['ReceiveName'],
+        text: maps[i]['Text'],
+        msgType: maps[i]['MsgType'],
+        dateTime: maps[i]['DateTime'],
+        updateProcess: maps[i]['UpdateProcess']);
+  });
+}
+
+Future<void> updateUpdateMsg(String content, int roomID, int roomMsgSN) async{
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  await db.execute('UPDATE msgInfo SET UpdateProcess=\'unprocessed\' and Text=\'$content\' WHERE RoomID=$roomID and RoomMsgSN=$roomMsgSN');
 }
 
 //寫入使用者目前存在的位置
@@ -76,12 +154,8 @@ Future<void> insertLocate(int locateID, String place) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.execute('INSERT INTO locate (LocateID, Place) VALUES ($locateID, \'$place\')');
-  _notCloseToOften++;
-  if (_notCloseToOften == 10) {
-    _notCloseToOften = 0;
-//    await db.close();
-  }
+  await db.execute(
+      'INSERT INTO locate (LocateID, Place) VALUES ($locateID, \'$place\')');
 }
 
 //更新使用者現在處於的畫面
@@ -91,14 +165,9 @@ void updateLocate(String place) async {
   );
   final Database db = await database;
   await db.execute('UPDATE locate SET Place=\'$place\' WHERE LocateID=1');
-  _notCloseToOften++;
-  if (_notCloseToOften == 10) {
-    _notCloseToOften = 0;
-//    await db.close();
-  }
 }
 
-Future<List<Locate>> selectLocate() async{
+Future<List<Locate>> selectLocate() async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
@@ -106,21 +175,19 @@ Future<List<Locate>> selectLocate() async{
   final List<Map<String, dynamic>> maps = await db.query('locate');
 //  await db.close();
   return List.generate(maps.length, (i) {
-    return Locate(
-        locateID: maps[i]['Locate'],
-        place: maps[i]['Place']
-    );
+    return Locate(locateID: maps[i]['Locate'], place: maps[i]['Place']);
   });
 }
 
 //存入使用者資料
-Future<void> insertUser(int userID, String name, String userImgURL, String token) async {
+Future<void> insertUser(
+    int userID, String name, String userImgURL, String token) async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db
-      .execute('INSERT INTO user (UserID, Name, UserImageURL, Token) VALUES ($userID, \'$name\', \'$userImgURL\', \'$token\')');
+  await db.execute(
+      'INSERT INTO user (UserID, Name, UserImageURL, Token) VALUES ($userID, \'$name\', \'$userImgURL\', \'$token\')');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -129,7 +196,7 @@ Future<void> insertUser(int userID, String name, String userImgURL, String token
 }
 
 //取得使用者資料
-Future<List<UserInfo>> selectUser() async{
+Future<List<UserInfo>> selectUser() async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
@@ -138,11 +205,10 @@ Future<List<UserInfo>> selectUser() async{
 //  await db.close();
   return List.generate(maps.length, (i) {
     return UserInfo(
-      userID: maps[i]['UserID'],
-      userName: maps[i]['Name'],
-      userImageURL: maps[i]['UserImageURL'],
-      token: maps[i]['Token']
-    );
+        userID: maps[i]['UserID'],
+        userName: maps[i]['Name'],
+        userImageURL: maps[i]['UserImageURL'],
+        token: maps[i]['Token']);
   });
 }
 
@@ -152,8 +218,7 @@ Future<void> updateUserName(int userID, String name) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db
-      .execute('UPDATE user SET Name=\'$name\' WHERE UserID=$userID');
+  await db.execute('UPDATE user SET Name=\'$name\' WHERE UserID=$userID');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -167,8 +232,8 @@ Future<void> updateUserImage(int userID, String imageUrl) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db
-      .execute('UPDATE user SET UserImageURL=\'$imageUrl\' WHERE UserID=$userID');
+  await db.execute(
+      'UPDATE user SET UserImageURL=\'$imageUrl\' WHERE UserID=$userID');
   _notCloseToOften++;
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -177,42 +242,59 @@ Future<void> updateUserImage(int userID, String imageUrl) async {
 }
 
 //存入聊天室清單
-Future<void> insertRoomList(List roomID, List userName, List userID, List imageList, List lastMsgTime) async{
+Future<void> insertRoomList(List roomID, List userName, List userID,
+    List imageList, List lastMsgTime) async {
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
-    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\', \'${lastMsgTime[i]}\'), ';
+    str +=
+        '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\', \'${lastMsgTime[i]}\'), ';
   }
   str = str.substring(0, str.length - 2);
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $str');
+  await db.rawInsert(
+      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $str');
 }
 
 //存入單一聊天室
-Future<void> insertSingleRoom(String roomID, String userName, String userID, String userImageUrl, String lastMsgTime) async{
+Future<void> insertSingleRoom(String roomID, String userName, String userID,
+    String userImageUrl, String lastMsgTime) async {
   print('新增單一個聊天室');
   String insertSingleRoom = 'VALUES ';
-  insertSingleRoom += '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\')';
+  insertSingleRoom +=
+      '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\')';
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMSgTime) $insertSingleRoom');
+  await db.rawInsert(
+      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $insertSingleRoom');
 
   String insertSN = 'VALUES ';
-  insertSN +='($roomID, 0)';
+  insertSN += '($roomID, 0)';
   await db.rawInsert('INSERT INTO roomsn (RoomID, MaxSN) $insertSN');
 }
 
-//取得聊天室列表
-Future<List<RoomList>> selectRoomList() async{
+Future<void> updateRoomListTime(String dateTime, String roomID) async {
+  print('更新聊天室最新訊息時間');
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  final List<Map<String, dynamic>> maps = await db.query('roomList', orderBy: 'LastMsgTime desc');
+  await db.rawQuery(
+      'update roomList set LastMsgTime=\'$dateTime\' where RoomID=\'$roomID\'');
+}
+
+//取得聊天室列表
+Future<List<RoomList>> selectRoomList() async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  final List<Map<String, dynamic>> maps =
+      await db.query('roomList', orderBy: 'LastMsgTime desc');
 //  await db.close();
   return List.generate(maps.length, (i) {
     return RoomList(
@@ -338,5 +420,3 @@ Future<List<ChatRoom>> specificRoom(String roomID) async {
     );
   });
 }
-
-
