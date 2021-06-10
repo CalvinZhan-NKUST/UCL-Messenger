@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/LongPolling.dart';
@@ -109,7 +111,6 @@ class _FriendList extends State<FriendList> {
   void _submitText(String roomName) async {
     final scaffold = Scaffold.of(context);
     String userIDList = '';
-    String _newRoomID = '';
     bool pass = true;
     for (int i = 0; i < _dataBaseFriendList.length; i++) {
       if (_dataBaseFriendList[i].userName == roomName) {
@@ -140,9 +141,9 @@ class _FriendList extends State<FriendList> {
         'RoomType': '2',
         'RoomName': roomName
       });
-      _newRoomID = response.body.toString();
-      print('RoomID:' + _newRoomID);
-      DB.insertSingleRoom(_newRoomID, roomName, '0', 'none');
+      Map<String, dynamic> resAddNewRoom;
+      resAddNewRoom = jsonDecode(response.body);
+      DB.insertSingleRoom(resAddNewRoom['RoomID'], roomName, '0', 'none', resAddNewRoom['LastMsgTime']);
       shutDownLongPolling();
       setLongPolling();
       scaffold.showSnackBar(SnackBar(

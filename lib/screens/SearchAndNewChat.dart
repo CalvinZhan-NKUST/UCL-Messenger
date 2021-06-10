@@ -1,11 +1,13 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/LongPolling.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
+import 'package:flutter_msg/Model.dart';
 
 class SearchAndNewChat extends StatefulWidget {
   @override
@@ -124,18 +126,31 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
                 userID: responseObject[i].userID.toString()));
       });
     }
-//    var userName = responseObject[0];
-//    print('UserName:${userName.userName}');
   }
 }
 
-class FriendSearchList extends StatelessWidget {
+class FriendSearchList extends StatefulWidget {
   final String userName;
   final String userImgURL;
   final String userID;
-
   FriendSearchList({Key key, this.userName, this.userImgURL, this.userID})
       : super(key: key);
+
+  _FriendSearchList createState() => _FriendSearchList();
+
+}
+
+class _FriendSearchList extends State<FriendSearchList> {
+  bool setImage = false;
+
+  void initState() {
+    super.initState();
+    if (widget.userImgURL != 'none')
+      setImage = true;
+    else
+      setImage = false;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,10 +177,12 @@ class FriendSearchList extends StatelessWidget {
               SizedBox(width: 10),
               CircleAvatar(
                 radius: 30,
-                backgroundImage: AssetImage('assets/005.png'),
+                backgroundImage: setImage
+                    ? NetworkImage('${widget.userImgURL}')
+                    : AssetImage('assets/005.png'),
               ),
               Container(
-                child: Text(userName,
+                child: Text(widget.userName,
                     style: TextStyle(
                         fontSize: 32.0,
                         color: Colors.white,
@@ -180,7 +197,7 @@ class FriendSearchList extends StatelessWidget {
                     iconSize: 36,
                     color: Color(0xfff8f8ff),
                     onPressed: () {
-                      _clickAdd(userName, userID, context, userImgURL);
+                      _clickAdd(widget.userName, widget.userID, context, widget.userImgURL);
                     },
                   ),
                 ),
@@ -193,11 +210,20 @@ class FriendSearchList extends StatelessWidget {
   }
 
   void _clickAdd(String userName, String userID, BuildContext context, String userImageUrl) async{
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return CupertinoAlertDialog(
+            title: Text('請稍候...'),
+          );
+        });
     final scaffold = Scaffold.of(context);
     var userInfo = _dataBaseUserInfo[0];
     int _roomExist = 0;
     for (int i = 0; i < _dataBaseRoomList.length; i++) {
       if (userID == (_dataBaseRoomList[i].userID).toString()) {
+        Navigator.of(context).pop();
         _roomExist=1;
         print('$userID, ${_dataBaseRoomList[i].userID}');
         scaffold.showSnackBar(SnackBar(
@@ -208,16 +234,17 @@ class FriendSearchList extends StatelessWidget {
       }
     }
     if (_roomExist==0){
-      String _newRoomID ='';
       String _userList = userID + ',' + userInfo.userID.toString() + ',';
       String url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
       var response = await http.post(Uri.parse(url),
           body: {'UserID':userInfo.userID.toString(),'UserIDList': _userList, 'RoomType': '1', 'RoomName':'none'});
-      _newRoomID = response.body.toString();
-      print('RoomID:'+_newRoomID);
-      DB.insertSingleRoom(_newRoomID, userName, userID, userImageUrl);
+      Map<String, dynamic> resAddNewRoom;
+      resAddNewRoom = jsonDecode(response.body);
+      print('RoomID:${resAddNewRoom['RoomID']}, LastMsgTime:${resAddNewRoom['LastMsgTime']}');
+      DB.insertSingleRoom(resAddNewRoom['RoomID'], userName, userID, userImageUrl, resAddNewRoom['LastMsgTime']);
       shutDownLongPolling();
       setLongPolling();
+      Navigator.of(context).pop();
       scaffold.showSnackBar(SnackBar(
         content: Text("聊天室新增完畢"),
         action: SnackBarAction(
@@ -240,42 +267,4 @@ class FriendSearchList extends StatelessWidget {
   }
 }
 
-class FriendResult {
-  int userID;
-  String userName;
-  String account;
-  String userImgURL;
 
-  FriendResult(this.userID, this.userName, this.account, this.userImgURL);
-
-  factory FriendResult.fromJson(dynamic json) {
-    return FriendResult(json['UserID'] as int, json['UserName'] as String,
-        json['Account'] as String, json['UserIngURL'] as String);
-  }
-
-  @override
-  String toString() {
-    return '{ ${this.userID}, ${this.userName}, ${this.account}, ${this.userImgURL}}';
-  }
-}
-
-class RoomList {
-  final int roomID;
-  final String userName;
-  final int userID;
-
-  RoomList({this.roomID, this.userName, this.userID});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'RoomID': roomID,
-      'UserID': userID,
-      'UserName': userName,
-    };
-  }
-
-  @override
-  String toString() {
-    return '{RoomID: $roomID, UserID: $userID, UserName: $userName}';
-  }
-}

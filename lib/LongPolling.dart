@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/SQLite.dart' as sqlite;
@@ -9,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:flutter_msg/screens/Index.dart' as Index;
 import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
+import 'package:flutter_msg/Model.dart';
 
 
 var period = const Duration(seconds: 60);
@@ -132,8 +131,8 @@ Future<void> getNewestMsg(String roomID, String msgID, String msgPara) async {
       body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': msgPara});
   print('Response body in getNewMsg:${response.body}');
   var tagObjsJson = jsonDecode(response.body)['res'] as List;
-  List<Messenger> tagObjs =
-      tagObjsJson.map((tagJson) => Messenger.fromJson(tagJson)).toList();
+  List<MessengerPolling> tagObjs =
+      tagObjsJson.map((tagJson) => MessengerPolling.fromJson(tagJson)).toList();
   print(tagObjs);
 
   for (int i =0; i< tagObjs.length; i++){
@@ -190,7 +189,8 @@ Future<void> checkRoomNum() async{
         }
       }
       if (count==0){
-        await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(), tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString());
+        await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(),
+            tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString(), tagObjs[i].lastMsgTime.toString());
         print('新增聊天室完成');
         var locate = await sqlite.selectLocate();
         var userLocate = locate[0];
@@ -212,7 +212,6 @@ void updateUserChatRoomNum(String userID, String roomNum) async{
   print('聊天室新增結果：${res.body}');
 }
 
-
 class RoomMaxSN {
   final String roomID;
   final String maxSN;
@@ -231,70 +230,5 @@ class RoomMaxSN {
       setFirstMaxSN(roomID, maxSN);
     }
     return '{RoomID: $roomID, MaxSN: $maxSN}';
-  }
-}
-
-class Messenger {
-  int msgID;
-  String roomID;
-  String sendUserID;
-  String msgType;
-  String receiveUserID;
-  String sendName;
-  String text;
-  String receiveName;
-
-  Messenger(this.msgID, this.roomID, this.sendUserID, this.sendName,
-      this.receiveName, this.receiveUserID, this.msgType, this.text);
-
-  factory Messenger.fromJson(dynamic json) {
-    return Messenger(
-        int.parse(json['MsgID']) as int,
-        json['RoomID'] as String,
-        json['SendUserID'] as String,
-        json['SendName'] as String,
-        json['ReceiveName'] as String,
-        json['ReceiveUserID'] as String,
-        json['MsgType'] as String,
-        json['Text'] as String);
-  }
-
-  @override
-  String toString() {
-    return '{ ${this.roomID}, ${this.msgID}, ${this.sendUserID}, ${this.sendName}, '
-        '${this.receiveName}, ${this.receiveUserID}, ${this.msgType}, ${this.text} }';
-  }
-}
-
-class ReceivedNotification {
-  ReceivedNotification({
-    @required this.id,
-    @required this.title,
-    @required this.body,
-    @required this.payload,
-  });
-
-  final int id;
-  final String title;
-  final String body;
-  final String payload;
-}
-
-class ChatUser {
-  String userName;
-  String roomID;
-  String userID;
-  String userImageUrl;
-
-  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
-
-  factory ChatUser.fromJson(dynamic json) {
-    return ChatUser(json['UserName'] as String, json['RoomID'] as String,
-        json['UserID'] as String, json['UserImageUrl'] as String);
-  }
-
-  @override
-  String toString() {
-    return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
   }
 }

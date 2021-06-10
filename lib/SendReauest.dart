@@ -2,16 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_email_sender/flutter_email_sender.dart';
-import 'package:flutter_msg/screens/CameraView.dart';
-import 'package:flutter_msg/screens/VideoView.dart';
-import 'package:flutter_msg/screens/ImageView.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
-import 'package:flutter_msg/LongPolling.dart' as polling;
-
-import 'package:video_player/video_player.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 
 int sendTime = 0;

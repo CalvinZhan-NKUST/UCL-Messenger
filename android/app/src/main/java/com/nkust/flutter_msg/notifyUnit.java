@@ -138,7 +138,7 @@ public class notifyUnit extends Service {
                 while (cursor.moveToNext()) {
                     int roomID = cursor.getInt(cursor.getColumnIndex("RoomID"));
                     int maxSN = cursor.getInt(cursor.getColumnIndex("MaxSN"));
-                    saveClientSN(Integer.roomID, Integer.maxSN);
+                    saveClientSN(roomID, maxSN);
                     Log.d("Demo", "onCommand 查詢結果：RoomID=" + roomID + ",MaxSN=" + maxSN);
                 }
 
@@ -395,8 +395,7 @@ public class notifyUnit extends Service {
     public void compareSN(Integer roomID, Integer serverSN) {
         Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN + ",clientSN:"+clientMsgSN.get(roomID.toString()));
         if (Integer.parseInt(clientMsgSN.get(roomID.toString())) < serverSN) {
-            saveClientSN(roomID, serverSN);
-            String getSN = String.valueOf(Integer.parseInt(clientMsgSN.get(roomID.toString())) - 1);
+            String getSN = String.valueOf(Integer.parseInt(clientMsgSN.get(roomID.toString())) + 1);
             Log.d("Demo","需要取得訊息，訊息編號為："+getSN);
             new Thread(new Runnable() {
                 @Override
@@ -407,6 +406,7 @@ public class notifyUnit extends Service {
                     getNewMsg(roomID.toString(), getSN, msgPara);
                 }
             }).start();
+            saveClientSN(roomID, serverSN);
         }
     }
 

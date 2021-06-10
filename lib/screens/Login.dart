@@ -8,6 +8,7 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
+import 'package:flutter_msg/Model.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -19,6 +20,7 @@ var _nameList = new List();
 var _idList = new List();
 var _maxSN = new List();
 var _imageList = new List();
+var _lastMsgTime = new List();
 
 class _LoginState extends State<Login> {
   static const String _channel = 'sendUserID';
@@ -186,6 +188,15 @@ class _LoginState extends State<Login> {
           tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
       print(tagObjs);
 
+      for (int i =0;i<tagObjs.length;i++){
+        _nameList.add(tagObjs[i].userName);
+        _roomList.add(tagObjs[i].roomID);
+        _idList.add(tagObjs[i].userID);
+        _imageList.add(tagObjs[i].userImageUrl);
+        _lastMsgTime.add(tagObjs[i].lastMsgTime);
+        _maxSN.add('0');
+      }
+
       _sendClick = 0;
       Navigator.of(context).pop();
       showDialog(
@@ -215,7 +226,7 @@ class _LoginState extends State<Login> {
                       DB.insertLocate(1, 'Login');
                       DB.insertRoom(_roomList, _maxSN);
                       DB.insertRoomList(
-                          _roomList, _nameList, _idList, _imageList);
+                          _roomList, _nameList, _idList, _imageList, _lastMsgTime);
                       updateUserChatRoomNum(userID);
                       Navigator.of(context).pop();
                       schoolIDController.clear();
@@ -274,28 +285,4 @@ void updateUserChatRoomNum(String userID) async {
   var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
   var res = await http.post(Uri.parse(url), body: {'UserID': userID, 'RoomNum': roomNum});
   print('聊天室新增結果：${res.body}');
-}
-
-class ChatUser {
-  String userName;
-  String roomID;
-  String userID;
-  String userImageUrl;
-
-  ChatUser(this.userName, this.roomID, this.userID, this.userImageUrl);
-
-  factory ChatUser.fromJson(dynamic json) {
-    return ChatUser(json['UserName'] as String, json['RoomID'].toString() as String,
-        json['UserID'] as String, json['UserImageUrl'] as String);
-  }
-
-  @override
-  String toString() {
-    _nameList.add(userName);
-    _roomList.add(roomID);
-    _idList.add(userID);
-    _imageList.add(userImageUrl);
-    _maxSN.add('0');
-    return '{ ${this.userName}, ${this.roomID}, ${this.userID} }';
-  }
 }

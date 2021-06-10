@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_msg/screens/ChatRoom.dart' as chat;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/LongPolling.dart' as polling;
+import 'package:flutter_msg/Model.dart';
 
 Future<void> runService() async {
   if (Platform.isAndroid) {
@@ -54,7 +55,7 @@ void checkMessageOrNewRoom (String roomID, String userID, String name, String te
   var locate = await DB.selectLocate();
   var userLocate = locate[0];
 
-  print(userLocate.place.toString());
+  print('使用者目前位置：${userLocate.place.toString()}');
   print(roomID);
   if (msgType!='NewRoom'){
     if (userLocate.place.toString() != roomID)
@@ -65,32 +66,3 @@ void checkMessageOrNewRoom (String roomID, String userID, String name, String te
     polling.checkRoomNum();
 
 }
-
-class NewMessage {
-  String roomID;
-  String userID;
-  String sendName;
-  String text;
-  String msgType;
-  String msgID;
-
-  NewMessage(this.sendName, this.roomID, this.userID, this.text, this.msgID, this.msgType);
-
-  factory NewMessage.fromJson(dynamic json) {
-    return NewMessage(
-        json['SendName'] as String,
-        json['RoomID'] as String,
-        json['UserID'] as String,
-        json['Text'] as String,
-        json['MsgID'] as String,
-        json['MsgType'] as String
-    );
-  }
-
-  @override
-  String toString() {
-    return '{ ${this.sendName}, ${this.roomID}, ${this.userID}, ${this.text}, ${this.msgID}, ${this.msgType} }';
-  }
-}
-
-

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
-import 'package:flutter_msg/GlobalVariable.dart' as globalString;
+import 'package:flutter_msg/Model.dart';
 
 //用於避免資料庫過於頻繁的開關
 int _notCloseToOften = 0;
@@ -57,37 +57,8 @@ void _createTableCompanyV1(Batch batch) {
 //更新DB Version: 1->2.
 void _updateTableCompanyV1toV2(Batch batch) {
   batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
+  batch.execute('ALTER TABLE roomList ADD LastMsgTime TEXT');
 }
-
-
-//連接資料庫和創建資料表
-//void connectDB() async {
-//  final createDatabase = openDatabase(
-//    join(await getDatabasesPath(), _dataBase),
-//  onCreate: (db, version) {
-//      print('進行資料表user建置');
-//      db.execute(
-//          'CREATE TABLE IF NOT EXISTS user(UserID INTEGER PRIMARY KEY, Name TEXT, UserImageURL TEXT, Token TEXT);');
-//      print('進行資料表locate建置');
-//      db.execute(
-//          'CREATE TABLE IF NOT EXISTS locate(LocateID INTEGER PRIMARY KEY, Place TEXT);');
-//      print('進行資料表roomsn建置');
-//      db.execute(
-//          'CREATE TABLE IF NOT EXISTS roomsn(RoomID INTEGER PRIMARY KEY, MaxSN INTEGER);');
-//      print('進行資料表roomList建置');
-//      db.execute(
-//          'CREATE TABLE IF NOT EXISTS roomList(RoomID INTEGER PRIMARY KEY, UserName TEXT, UserID INTEGER, UserImageUrl TEXT);');
-//      return;
-//    },
-////  onUpgrade: _updateTableCompanyV1toV2(batch),
-//    version: 2,
-//  );
-//  print('Connect Finish');
-//}
-//
-//void _updateTableCompanyV1toV2(Batch batch) {
-//  batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
-//}
 
 Future<String> countChatRoomQuantity() async{
   final database = openDatabase(
@@ -206,29 +177,29 @@ Future<void> updateUserImage(int userID, String imageUrl) async {
 }
 
 //存入聊天室清單
-Future<void> insertRoomList(List roomID, List userName, List userID, List imageList) async{
+Future<void> insertRoomList(List roomID, List userName, List userID, List imageList, List lastMsgTime) async{
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
-    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\'), ';
+    str += '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\', \'${lastMsgTime[i]}\'), ';
   }
   str = str.substring(0, str.length - 2);
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl) $str');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $str');
 }
 
 //存入單一聊天室
-Future<void> insertSingleRoom(String roomID, String userName, String userID, String userImageUrl) async{
+Future<void> insertSingleRoom(String roomID, String userName, String userID, String userImageUrl, String lastMsgTime) async{
   print('新增單一個聊天室');
   String insertSingleRoom = 'VALUES ';
-  insertSingleRoom += '($roomID, \'$userName\', $userID, \'$userImageUrl\')';
+  insertSingleRoom += '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\')';
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl) $insertSingleRoom');
+  await db.rawInsert('INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMSgTime) $insertSingleRoom');
 
   String insertSN = 'VALUES ';
   insertSN +='($roomID, 0)';
@@ -241,7 +212,7 @@ Future<List<RoomList>> selectRoomList() async{
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  final List<Map<String, dynamic>> maps = await db.query('roomList');
+  final List<Map<String, dynamic>> maps = await db.query('roomList', orderBy: 'LastMsgTime desc');
 //  await db.close();
   return List.generate(maps.length, (i) {
     return RoomList(
@@ -368,90 +339,4 @@ Future<List<ChatRoom>> specificRoom(String roomID) async {
   });
 }
 
-class ChatRoom {
-  final int roomID;
-  final int maxSN;
 
-  ChatRoom({this.roomID, this.maxSN});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'RoomID': roomID,
-      'MaxSN': maxSN,
-    };
-  }
-
-  @override
-  String toString() {
-    return '{RoomID: $roomID, MaxSN: $maxSN}';
-  }
-}
-
-class UserInfo {
-  final int userID;
-  final String userName;
-  final String userImageURL;
-  final String token;
-
-  UserInfo({this.userID, this.userName, this.userImageURL, this.token});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'UserID': userID,
-      'UserName': userName,
-      'UserImageURL': userImageURL,
-      'Token': token
-    };
-  }
-
-  @override
-  String toString() {
-    globalString.GlobalString.userID = userID.toString();
-    globalString.GlobalString.uuid = token;
-    globalString.GlobalString.userImageURL = userImageURL;
-    globalString.GlobalString.userName = userName;
-    return '{UserID: $userID, UserName: $userName, UserImageURL: $userImageURL, Token: $token}';
-  }
-}
-
-class RoomList {
-  final int roomID;
-  final String userName;
-  final int userID;
-  final String userImageUrl;
-
-  RoomList({this.roomID, this.userName, this.userID, this.userImageUrl});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'RoomID':roomID,
-      'UserID': userID,
-      'UserName': userName,
-      'UserImageUrl':userImageUrl
-    };
-  }
-
-  @override
-  String toString() {
-    return '{RoomID: $roomID, UserID: $userID, UserName: $userName, UserImageUrl: $userImageUrl}';
-  }
-}
-
-class Locate {
-  final int locateID;
-  final String place;
-
-  Locate({this.locateID, this.place});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'LocateID':locateID,
-      'Place': place
-    };
-  }
-
-  @override
-  String toString() {
-    return '{LocateID: $locateID, Place: $place}';
-  }
-}
