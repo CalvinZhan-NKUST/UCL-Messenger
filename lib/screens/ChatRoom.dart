@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:flutter_msg/SQLite.dart' as DB;
-import 'package:flutter_msg/ChatRoomMsgWidget.dart';
+import 'package:flutter_msg/widget/ChatRoomMsgWidget.dart';
 import 'package:flutter_msg/Model.dart';
 import 'package:flutter_msg/SendMessage.dart';
 
@@ -39,6 +39,8 @@ final List<Widget> _messages = []; // 建立一個空陣列
 Map<String, dynamic> res;
 Map<String, dynamic> historyMsg;
 var updateMsgSN = new List();
+var getUpdateMsgSN = new List();
+var checkChatRoomAction = new List();
 
 int _nextSN = 0;
 String _mainUserID = '';
@@ -94,16 +96,37 @@ class ChatScreenState extends State<ChatScreen> {
     int setMsgSN = 0;
     updateMsgSN.clear();
     updateMsgSN = await DB.selectUpdateMsgSN(_recentRoomID);
-    if (updateMsgSN.isEmpty){
+    if (updateMsgSN.isEmpty) {
       setMsgSN = 1;
-      DB.insertNewUpdateMsg(setMsgSN, int.parse(_recentRoomID), int.parse(_mainUserID), _mainUserName,
-          _friendName, int.parse(_friendID), 'url', type, DateTime.now().millisecondsSinceEpoch.toString(), 'uploadingFile');
-    }else{
+      DB.insertNewUpdateMsg(
+          setMsgSN,
+          int.parse(_recentRoomID),
+          int.parse(_mainUserID),
+          _mainUserName,
+          _friendName,
+          int.parse(_friendID),
+          'url',
+          type,
+          DateTime.now().millisecondsSinceEpoch.toString(),
+          'uploadingFile');
+    } else {
       var msgSN = updateMsgSN[0];
-      setMsgSN = int.parse(msgSN)+1;
-      DB.insertNewUpdateMsg(setMsgSN, int.parse(_recentRoomID), int.parse(_mainUserID), _mainUserName,
-          _friendName, int.parse(_friendID), 'url', type, DateTime.now().millisecondsSinceEpoch.toString(), 'uploadingFile');
+      setMsgSN = int.parse(msgSN) + 1;
+      DB.insertNewUpdateMsg(
+          setMsgSN,
+          int.parse(_recentRoomID),
+          int.parse(_mainUserID),
+          _mainUserName,
+          _friendName,
+          int.parse(_friendID),
+          'url',
+          type,
+          DateTime.now().millisecondsSinceEpoch.toString(),
+          'uploadingFile');
     }
+
+    getUpdateMsgSN = await DB.selectUpdateMsgSN(_recentRoomID);
+    var msgUpdateInfo = getUpdateMsgSN[0];
 
     var request = http.MultipartRequest(
         'POST', Uri.parse('${globalString.GlobalString.ipRedis}/uploadFiles'));
@@ -112,7 +135,18 @@ class ChatScreenState extends State<ChatScreen> {
     http.StreamedResponse response = await request.send();
     String fileUrl = await response.stream.bytesToString();
     print('檔案上傳結果：$fileUrl');
-    _submitText(type, fileUrl, setMsgSN);
+    _submitText(_recentRoomID, _mainUserID, _mainUserName, _friendID,
+        _friendName, 'Text', _chatController.text.trim(), 0);
+
+    _submitText(
+        msgUpdateInfo.roomID.toString(),
+        msgUpdateInfo.sendUserID.toString(),
+        msgUpdateInfo.sendName,
+        msgUpdateInfo.receiveUserID.toString(),
+        msgUpdateInfo.receiveName,
+        type,
+        fileUrl,
+        setMsgSN);
   }
 
   Future<void> _checkMsg(String msgUrl) async {
@@ -357,7 +391,15 @@ class ChatScreenState extends State<ChatScreen> {
                       onPressed: () {
                         _textInput = _chatController.text.trim();
                         if (_textInput.isEmpty == false) {
-                          _submitText('Text', _chatController.text.trim(),0);
+                          _submitText(
+                              _recentRoomID,
+                              _mainUserID,
+                              _mainUserName,
+                              _friendID,
+                              _friendName,
+                              'Text',
+                              _chatController.text.trim(),
+                              0);
                         }
                       },
                     ),
@@ -368,35 +410,85 @@ class ChatScreenState extends State<ChatScreen> {
         )));
   }
 
-  Future<void> _submitText(String msgType, String content, int msgSN) async {
-    insertMessageWidget(_mainUserID, msgType, _mainUserName, content, 0);
+  Future<void> _submitText(
+      String roomID,
+      String sendUserID,
+      String sendUserName,
+      String receiveUserID,
+      String receiveName,
+      String msgType,
+      String content,
+      int msgSN) async {
+    insertMessageWidget(sendUserID, msgType, sendUserName, content, 0);
+
     if (msgType == 'Text') {
+      print('寫入資料：$content');
       _chatController.clear();
-      setMsgUpdate(msgType, content, 'unprocessed');
-    }else{
-      DB.updateUpdateMsg(content, int.parse(_recentRoomID), msgSN);
+      await setMsgUpdate(roomID, sendUserID, sendUserName, receiveUserID, receiveName,
+          msgType, content, 'unprocessed');
+    } else {
+      await DB.updateUpdateMsg(content, int.parse(roomID), msgSN);
       sendMessage(
-          _recentRoomID,
-          _mainUserID,
-          _mainUserName,
-          _friendName,
-          _friendID,
+          roomID,
+          sendUserID,
+          sendUserName,
+          receiveName,
+          receiveUserID,
           content,
           msgType,
-          DateTime.now().millisecondsSinceEpoch.toString());
+          DateTime.now().millisecondsSinceEpoch.toString(),
+          msgSN);
     }
   }
 
-  Future<void> setMsgUpdate(String type, String content, String process) async{
+  Future<void> setMsgUpdate(
+      String roomID,
+      String sendUserID,
+      String sendUserName,
+      String receiveUserID,
+      String receiveName,
+      String type,
+      String content,
+      String process) async {
+    int msgSN = 0;
     updateMsgSN.clear();
-    updateMsgSN = await DB.selectUpdateMsgSN(_recentRoomID);
-    if (updateMsgSN.isEmpty){
-      DB.insertNewUpdateMsg(1, int.parse(_recentRoomID), int.parse(_mainUserID), _mainUserName,
-          _friendName, int.parse(_friendID), content, type, DateTime.now().millisecondsSinceEpoch.toString(), process);
-    }else{
-      var msgSN = updateMsgSN[0];
-      DB.insertNewUpdateMsg(int.parse(msgSN.roomMsgSN)+1, int.parse(_recentRoomID), int.parse(_mainUserID), _mainUserName,
-          _friendName, int.parse(_friendID), content, type, DateTime.now().millisecondsSinceEpoch.toString(), process);
+    updateMsgSN = await DB.selectUpdateMsgSN(roomID);
+    if (updateMsgSN.isEmpty) {
+      msgSN = 1;
+    } else {
+      var updateSN = updateMsgSN[0];
+      print('房間順序列表：${updateSN.roomMsgSN.toString()}');
+      msgSN = updateSN.roomMsgSN + 1;
+      print(msgSN);
+    }
+    await DB.insertNewUpdateMsg(
+        msgSN,
+        int.parse(roomID),
+        int.parse(sendUserID),
+        sendUserName,
+        receiveName,
+        int.parse(receiveUserID),
+        content,
+        type,
+        DateTime.now().millisecondsSinceEpoch.toString(),
+        process);
+
+    checkChatRoomAction.clear();
+    checkChatRoomAction = await DB.specificRoomAction(roomID);
+    var roomAction = checkChatRoomAction[0];
+
+    if (roomAction.action.toString() != 'uploading'){
+      sendMessage(
+          roomID,
+          sendUserID,
+          sendUserName,
+          receiveName,
+          receiveUserID,
+          content,
+          type,
+          DateTime.now().millisecondsSinceEpoch.toString(),
+          msgSN);
+      await DB.updateRoomAction('uploading', roomID);
     }
   }
 }

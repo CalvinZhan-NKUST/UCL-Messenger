@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
-import 'package:flutter_msg/screens/VideoView.dart';
-import 'package:flutter_msg/screens/ImageView.dart';
+import 'package:flutter_msg/widget/VideoView.dart';
+import 'package:flutter_msg/widget/ImageView.dart';
 import 'package:video_player/video_player.dart';
 
 class MessageSend extends StatefulWidget {

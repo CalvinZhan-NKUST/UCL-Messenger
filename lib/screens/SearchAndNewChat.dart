@@ -241,7 +241,7 @@ class _FriendSearchList extends State<FriendSearchList> {
       Map<String, dynamic> resAddNewRoom;
       resAddNewRoom = jsonDecode(response.body);
       print('RoomID:${resAddNewRoom['RoomID']}, LastMsgTime:${resAddNewRoom['LastMsgTime']}');
-      DB.insertSingleRoom(resAddNewRoom['RoomID'], userName, userID, userImageUrl, resAddNewRoom['LastMsgTime']);
+      DB.insertSingleRoom(resAddNewRoom['RoomID'], userName, userID, userImageUrl, resAddNewRoom['LastMsgTime'], 'none');
       shutDownLongPolling();
       setLongPolling();
       Navigator.of(context).pop();

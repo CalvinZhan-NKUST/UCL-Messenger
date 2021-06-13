@@ -181,21 +181,25 @@ class RoomList {
   final String userName;
   final int userID;
   final String userImageUrl;
+  final String lastMsgTime;
+  final String action;
 
-  RoomList({this.roomID, this.userName, this.userID, this.userImageUrl});
+  RoomList({this.roomID, this.userName, this.userID, this.userImageUrl, this.lastMsgTime, this.action});
 
   Map<String, dynamic> toMap() {
     return {
       'RoomID': roomID,
       'UserID': userID,
       'UserName': userName,
-      'UserImageUrl': userImageUrl
+      'UserImageUrl': userImageUrl,
+      'lastMsgTime': lastMsgTime,
+      'Action':action
     };
   }
 
   @override
   String toString() {
-    return '{RoomID: $roomID, UserID: $userID, UserName: $userName, UserImageUrl: $userImageUrl}';
+    return '{RoomID: $roomID, UserID: $userID, UserName: $userName, UserImageUrl: $userImageUrl, LastMsgTime:$lastMsgTime ,Action:$action}';
   }
 }
 
@@ -238,20 +242,6 @@ class MessageUpdate {
       this.text,
       this.dateTime,
       this.updateProcess});
-
-//  factory MessengerUpdate.fromJson(dynamic json) {
-//    return MessengerUpdate(
-//        json['RoomMsgSN'] as int,
-//        json['RoomID'] as int,
-//        json['SendUserID'] as int,
-//        json['SendName'] as String,
-//        json['ReceiveName'] as String,
-//        json['ReceiveUserID'] as int,
-//        json['MsgType'] as String,
-//        json['Text'] as String,
-//        json['DateTime'] as String,
-//        json['UpdateProcess'] as String);
-//  }
 
   Map<String, dynamic> toMap() {
     return {

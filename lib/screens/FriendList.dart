@@ -143,7 +143,7 @@ class _FriendList extends State<FriendList> {
       });
       Map<String, dynamic> resAddNewRoom;
       resAddNewRoom = jsonDecode(response.body);
-      DB.insertSingleRoom(resAddNewRoom['RoomID'], roomName, '0', 'none', resAddNewRoom['LastMsgTime']);
+      DB.insertSingleRoom(resAddNewRoom['RoomID'], roomName, '0', 'none', resAddNewRoom['LastMsgTime'], 'none');
       shutDownLongPolling();
       setLongPolling();
       scaffold.showSnackBar(SnackBar(

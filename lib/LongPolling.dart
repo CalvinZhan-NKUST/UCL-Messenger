@@ -163,7 +163,6 @@ Future<void> checkRoomNum() async{
   Map<String, dynamic> roomNumServer= jsonDecode(response.body);
   print('Server的聊天室數量：${roomNumServer['RoomNum']}');
 
-
   String roomNumClient = await sqlite.countChatRoomQuantity();
   print('Client的聊天室數量：$roomNumClient');
 
@@ -190,7 +189,7 @@ Future<void> checkRoomNum() async{
       }
       if (count==0){
         await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(),
-            tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString(), tagObjs[i].lastMsgTime.toString());
+            tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString(), tagObjs[i].lastMsgTime.toString(), 'none');
         print('新增聊天室完成');
         var locate = await sqlite.selectLocate();
         var userLocate = locate[0];

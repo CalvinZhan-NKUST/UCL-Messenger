@@ -21,6 +21,7 @@ var _idList = new List();
 var _maxSN = new List();
 var _imageList = new List();
 var _lastMsgTime = new List();
+var _action = new List();
 
 class _LoginState extends State<Login> {
   static const String _channel = 'sendUserID';
@@ -186,7 +187,6 @@ class _LoginState extends State<Login> {
       var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
       List<ChatUser> tagObjs =
           tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
-      print(tagObjs);
 
       for (int i =0;i<tagObjs.length;i++){
         _nameList.add(tagObjs[i].userName);
@@ -194,6 +194,7 @@ class _LoginState extends State<Login> {
         _idList.add(tagObjs[i].userID);
         _imageList.add(tagObjs[i].userImageUrl);
         _lastMsgTime.add(tagObjs[i].lastMsgTime);
+        _action.add('none');
         _maxSN.add('0');
       }
 
@@ -226,7 +227,7 @@ class _LoginState extends State<Login> {
                       DB.insertLocate(1, 'Login');
                       DB.insertRoom(_roomList, _maxSN);
                       DB.insertRoomList(
-                          _roomList, _nameList, _idList, _imageList, _lastMsgTime);
+                          _roomList, _nameList, _idList, _imageList, _lastMsgTime, _action);
                       updateUserChatRoomNum(userID);
                       Navigator.of(context).pop();
                       schoolIDController.clear();

@@ -10,6 +10,7 @@ int _notCloseToOften = 0;
 String _dataBase = 'chatroom.db';
 
 connectDB() async {
+  print('connect DB');
   var databasesPath = await getDatabasesPath();
   String path = join(databasesPath, _dataBase);
   var ourDb = await openDatabase(path,
@@ -58,8 +59,9 @@ void _createTableCompanyV1(Batch batch) {
 void _updateTableCompanyV1toV2(Batch batch) {
   batch.execute('ALTER TABLE roomList ADD UserImageUrl TEXT');
   batch.execute('ALTER TABLE roomList ADD LastMsgTime TEXT');
+  batch.execute('ALTER TABLE roomList ADD Action TEXT');
   batch.execute(
-      'CREATE TABLE IF NOT EXISTS msgUpdate(MsgID INTEGER AUTOINCREMENT PRIMARY KEY, RoomMsgSN INTEGER, RoomID INTEGER,'
+      'CREATE TABLE IF NOT EXISTS msgUpdate(MsgID INTEGER PRIMARY KEY, RoomMsgSN INTEGER, RoomID INTEGER,'
       'SendUserID INTEGER, SendName TEXT, ReceiveName TEXT, ReceiveUserID INTEGER, Text TEXT, MsgType TEXT, DateTime TEXT, UpdateProcess TEXT)');
 }
 
@@ -81,27 +83,37 @@ Future<void> insertNewUpdateMsg(
   await db.execute(
       'INSERT INTO msgUpdate (RoomMsgSN,RoomID,SendUserID,SendName,ReceiveName,ReceiveUserID,Text,MsgType,DateTime,UpdateProcess) '
       'VALUES ($roomMsgSN, $roomID, $sendUserID, \'$sendName\', \'$receiveName\', $receiveUserID, \'$text\', \'$msgType\', \'$dateTime\', \'$updateProcess\')');
+  print('寫入完成：$text');
 }
 
-//查詢目前聊天室的數量
-Future<String> countChatRoomQuantity() async {
+Future<List<MessageUpdate>> selectUpdateData() async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  int count =
-      Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM roomList'));
-  return '$count';
+  final List<Map<String, dynamic>> maps = await db.query('msgUpdate');
+  return List.generate(maps.length, (i) {
+    return MessageUpdate(
+        roomMsgSN: maps[i]['RoomMsgSN'],
+        roomID: maps[i]['RoomID'],
+        sendUserID: maps[i]['SendUserID'],
+        receiveUserID: maps[i]['ReceiveUserID'],
+        sendName: maps[i]['SendName'],
+        receiveName: maps[i]['ReceiveName'],
+        text: maps[i]['Text'],
+        msgType: maps[i]['MsgType'],
+        dateTime: maps[i]['DateTime'],
+        updateProcess: maps[i]['UpdateProcess']);
+  });
 }
 
-//查詢目前訊息編號的訊息
+//依照聊天室查詢最新一筆訊息，不管有沒有上傳完成
 Future<List<MessageUpdate>> selectUpdateMsgSN(String roomID) async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  final List<Map<String, dynamic>> maps = await db.rawQuery(
-      'select * from msgInfo where RoomID=$roomID and order by RoomMsgSN limit 1');
+  final List<Map<String, dynamic>> maps = await db.query('msgUpdate',where: 'RoomID=$roomID',orderBy: 'RoomMsgSN desc',limit: 1);
   return List.generate(maps.length, (i) {
     return MessageUpdate(
         roomMsgSN: maps[i]['RoomMsgSN'],
@@ -123,8 +135,7 @@ Future<List<MessageUpdate>> selectUpdateMsg(String roomID) async {
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  final List<Map<String, dynamic>> maps = await db.rawQuery(
-      'select * from msgInfo where RoomID=$roomID and UpdateProcess=\'unprocessed\' order by RoomMsgSN desc');
+  final List<Map<String, dynamic>> maps = await db.query('msgUpdate',where: 'RoomID=$roomID and UpdateProcess=\'unprocessed\'',orderBy: 'RoomMsgSN',limit: 1);
   return List.generate(maps.length, (i) {
     return MessageUpdate(
         roomMsgSN: maps[i]['RoomMsgSN'],
@@ -145,7 +156,15 @@ Future<void> updateUpdateMsg(String content, int roomID, int roomMsgSN) async{
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
-  await db.execute('UPDATE msgInfo SET UpdateProcess=\'unprocessed\' and Text=\'$content\' WHERE RoomID=$roomID and RoomMsgSN=$roomMsgSN');
+  await db.execute('UPDATE msgUpdate SET UpdateProcess=\'unprocessed\' and Text=\'$content\' WHERE RoomID=$roomID and RoomMsgSN=$roomMsgSN');
+}
+
+Future<void> updateMsgProcess(int roomID, int roomMsgSN) async{
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  await db.execute('UPDATE msgUpdate SET UpdateProcess=\'success\' WHERE RoomID=$roomID and RoomMsgSN=$roomMsgSN');
 }
 
 //寫入使用者目前存在的位置
@@ -241,36 +260,48 @@ Future<void> updateUserImage(int userID, String imageUrl) async {
   }
 }
 
+//查詢目前聊天室的數量
+Future<String> countChatRoomQuantity() async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  int count =
+  Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM roomList'));
+  return '$count';
+}
+
 //存入聊天室清單
 Future<void> insertRoomList(List roomID, List userName, List userID,
-    List imageList, List lastMsgTime) async {
+    List imageList, List lastMsgTime, List action) async {
   String str = 'VALUES ';
   for (int i = 0; i < roomID.length; i++) {
     str +=
-        '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\', \'${lastMsgTime[i]}\'), ';
+        '(${roomID[i]}, \'${userName[i]}\', ${userID[i]}, \'${imageList[i]}\', \'${lastMsgTime[i]}\', \'${action[i]}\'), ';
   }
   str = str.substring(0, str.length - 2);
+  print(str);
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.rawInsert(
-      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $str');
+      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime, Action) $str');
 }
 
 //存入單一聊天室
 Future<void> insertSingleRoom(String roomID, String userName, String userID,
-    String userImageUrl, String lastMsgTime) async {
+    String userImageUrl, String lastMsgTime, String action) async {
   print('新增單一個聊天室');
   String insertSingleRoom = 'VALUES ';
   insertSingleRoom +=
-      '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\')';
+      '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\', , \'$action\')';
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.rawInsert(
-      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime) $insertSingleRoom');
+      'INSERT INTO roomList (RoomID, UserName, UserID, UserImageUrl, LastMsgTime, action) $insertSingleRoom');
 
   String insertSN = 'VALUES ';
   insertSN += '($roomID, 0)';
@@ -285,6 +316,16 @@ Future<void> updateRoomListTime(String dateTime, String roomID) async {
   final Database db = await database;
   await db.rawQuery(
       'update roomList set LastMsgTime=\'$dateTime\' where RoomID=\'$roomID\'');
+}
+
+Future<void> updateRoomAction(String action, String roomID) async {
+  print('更新聊天室動作動作');
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  await db.rawQuery(
+      'update roomList set Action=\'$action\' where RoomID=\'$roomID\'');
 }
 
 //取得聊天室列表
@@ -302,6 +343,28 @@ Future<List<RoomList>> selectRoomList() async {
       userID: maps[i]['UserID'],
       userName: maps[i]['UserName'],
       userImageUrl: maps[i]['UserImageUrl'],
+      lastMsgTime: maps[i]['LastMsgTime'],
+      action: maps[i]['Action']
+    );
+  });
+}
+
+//取得聊天室列表
+Future<List<RoomList>> specificRoomAction(String roomID) async {
+  final database = openDatabase(
+    join(await getDatabasesPath(), _dataBase),
+  );
+  final Database db = await database;
+  final List<Map<String, dynamic>> maps =
+  await db.query('roomList', where: '$roomID');
+//  await db.close();
+  return List.generate(maps.length, (i) {
+    return RoomList(
+        roomID: maps[i]['RoomID'],
+        userID: maps[i]['UserID'],
+        userName: maps[i]['UserName'],
+        userImageUrl: maps[i]['UserImageUrl'],
+        action: maps[i]['Action']
     );
   });
 }

@@ -154,7 +154,7 @@ class _HomePageState extends State<HomePage> {
   void changeMenu() async {
     if (dataBaseUserInfo.isEmpty) {
       navigationToLogin();
-      print('直接登入');
+      print('進行登入');
     } else {
       var userInfo = dataBaseUserInfo[0];
       print('有資料可以進行持續登入');
@@ -170,6 +170,9 @@ class _HomePageState extends State<HomePage> {
       print('Response body:${response.body}');
       res = jsonDecode(response.body);
       print(res['res']);
+
+      print(await DB.selectUpdateData());
+
       if (res['res'] != 'pass')
         navigationToLogin();
       else
@@ -197,6 +200,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void navigationToIndex() {
+    polling.checkRoomNum();
     Navigator.push(context,
         MaterialPageRoute(builder: (context) => BottomNavigationController()));
   }
@@ -215,7 +219,6 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     DB.connectDB();
     getUserInfo();
-    polling.checkRoomNum();
     if (Platform.isAndroid)
       callMethodChannel.callMethod();
     return Image.asset('assets/app_icon.png');
