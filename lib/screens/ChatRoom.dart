@@ -419,6 +419,7 @@ class ChatScreenState extends State<ChatScreen> {
       String msgType,
       String content,
       int msgSN) async {
+    
     insertMessageWidget(sendUserID, msgType, sendUserName, content, 0);
 
     if (msgType == 'Text') {

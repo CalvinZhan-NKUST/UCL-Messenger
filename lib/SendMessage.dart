@@ -61,6 +61,7 @@ Future<void> sendMessage(
               sendMsg.roomMsgSN);
         }else{
           DB.updateRoomAction('none', roomID);
+          print('訊息上傳完畢，更新聊天室狀態');
         }
       }
     } else {

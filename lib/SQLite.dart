@@ -309,7 +309,7 @@ Future<void> insertSingleRoom(String roomID, String userName, String userID,
 }
 
 Future<void> updateRoomListTime(String dateTime, String roomID) async {
-  print('更新聊天室最新訊息時間');
+  print('更新聊天室最新時間');
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );

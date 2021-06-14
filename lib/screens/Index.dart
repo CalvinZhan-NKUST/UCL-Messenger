@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/Model.dart';
+import 'package:flutter_msg/SendMessage.dart';
 import 'package:flutter_msg/screens/ChatRoom.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
 import 'package:http/http.dart' as http;
@@ -23,28 +24,38 @@ List<Widget> _roomList = [];
 Timer checkChatRoom;
 
 class IndexScreenState extends State<IndexScreen> {
-  
   void checkRoomNum() {
-    checkChatRoom = new Timer.periodic(Duration(seconds: 1), (Timer timer){
+    checkChatRoom = new Timer.periodic(Duration(seconds: 1), (Timer timer) {
       setState(() {});
     });
   }
 
-  void refreshChatRoomList() async{
+  void refreshChatRoomList() async {
     print('重新整理聊天室清單');
     await DB.selectUser();
     await DB.selectRoomList();
     makeFriendChatList();
   }
 
-  Future<void> checkMessageSend() async{
+  Future<void> checkMessageSend() async {
     List<RoomList> checkChatRoomAction = new List();
     checkChatRoomAction = await DB.selectRoomList();
-    for (int i =0; i<checkChatRoomAction.length;i++){
+    for (int i = 0; i < checkChatRoomAction.length; i++) {
       var roomAction = checkChatRoomAction[i];
-      if (roomAction.action.toString()=='uploading'){
+      if (roomAction.action.toString() == 'uploading') {
+        List<MessageUpdate> updateMsg = new List();
+        updateMsg = await DB.selectUpdateMsg(roomAction.roomID.toString());
         print('有尚未上傳的訊息');
-        DB.updateRoomAction('none', roomAction.roomID.toString());
+        sendMessage(
+            updateMsg[0].roomID.toString(),
+            updateMsg[0].sendUserID.toString(),
+            updateMsg[0].sendName,
+            updateMsg[0].receiveName,
+            updateMsg[0].receiveUserID.toString(),
+            updateMsg[0].text,
+            updateMsg[0].msgType,
+            updateMsg[0].dateTime,
+            updateMsg[0].roomMsgSN);
       }
     }
   }
@@ -66,7 +77,7 @@ class IndexScreenState extends State<IndexScreen> {
     _roomList.clear();
     DB.updateLocate('none');
     print('Index dispose');
-    if (checkChatRoom!=null){
+    if (checkChatRoom != null) {
       checkChatRoom.cancel();
       checkChatRoom = null;
     }
@@ -77,8 +88,8 @@ class IndexScreenState extends State<IndexScreen> {
     print('userID:${globalString.GlobalString.userID}');
     var url = '${globalString.GlobalString.ipMysql}/getConfigPara';
     print(url);
-    var response = await http
-        .post(Uri.parse(url), body: {'UserID': globalString.GlobalString.userID});
+    var response = await http.post(Uri.parse(url),
+        body: {'UserID': globalString.GlobalString.userID});
     print('getConfigPara body:${response.body}');
     res = jsonDecode(response.body);
     print(res['MsgPara']);
@@ -104,26 +115,26 @@ class IndexScreenState extends State<IndexScreen> {
     globalString.GlobalString.userName = userInfo.userName;
     globalString.GlobalString.userID = userInfo.userID.toString();
     getMsgPara();
-      for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
-        var room = dataBaseRoomList[i];
-        pollingRoomList.add(room.roomID);
-        print('Updating new room list.');
-        _roomList.insert(
-            0,
-            RecentChat(
-              friendID: room.userID.toString(),
-              friendName: room.userName,
-              roomID: room.roomID.toString(),
-              userID: userInfo.userID.toString(),
-              userName: userInfo.userName,
-              friendImageUrl: room.userImageUrl.toString(),
-              userImageUrl: userInfo.userImageURL.toString(),
-            ));
-      }
+    for (var i = dataBaseRoomList.length - 1; i >= 0; i--) {
+      var room = dataBaseRoomList[i];
+      pollingRoomList.add(room.roomID);
+      print('Updating new room list.');
+      _roomList.insert(
+          0,
+          RecentChat(
+            friendID: room.userID.toString(),
+            friendName: room.userName,
+            roomID: room.roomID.toString(),
+            userID: userInfo.userID.toString(),
+            userName: userInfo.userName,
+            friendImageUrl: room.userImageUrl.toString(),
+            userImageUrl: userInfo.userImageURL.toString(),
+          ));
+    }
 
     if (io.Platform.isAndroid) {
       callMethodChannel.runService();
-    } else if (io.Platform.isIOS){
+    } else if (io.Platform.isIOS) {
       polling.setRoomList(pollingRoomList);
       polling.setUserID(userInfo.userID.toString());
     }
@@ -155,4 +166,3 @@ class IndexScreenState extends State<IndexScreen> {
     );
   }
 }
-
