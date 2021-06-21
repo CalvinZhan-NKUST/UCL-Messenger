@@ -244,7 +244,7 @@ class _FriendSearchList extends State<FriendSearchList> {
       resAddNewRoom = jsonDecode(response.body);
       print('RoomID:${resAddNewRoom['RoomID']}, LastMsgTime:${resAddNewRoom['LastMsgTime']}');
       DB.insertSingleRoom(resAddNewRoom['RoomID'], userName, userID, userImageUrl, resAddNewRoom['LastMsgTime'], 'none');
-      if (io.Platform.isAndroid){
+      if (io.Platform.isIOS){
         shutDownLongPolling();
         setLongPolling();
       }
