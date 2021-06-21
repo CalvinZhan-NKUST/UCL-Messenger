@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -109,7 +110,7 @@ class _SearchAndNewChat extends State<SearchAndNewChat> {
     var userInfo = _dataBaseUserInfo[0];
     String url = '${globalString.GlobalString.ipMysql}/searchUser';
     var response = await http.post(Uri.parse(url),
-        body: {'searchValue': inputText, 'UserID': userInfo.userID.toString()});
+        body: {'searchValue': inputText, 'UserID': userInfo.userID.toString(), 'Token': userInfo.token.toString()});
     print(response.body);
 
     var responseJson = jsonDecode(response.body)['res'] as List;
@@ -237,13 +238,16 @@ class _FriendSearchList extends State<FriendSearchList> {
       String _userList = userID + ',' + userInfo.userID.toString() + ',';
       String url = '${globalString.GlobalString.ipMysql}/createNewChatRoom';
       var response = await http.post(Uri.parse(url),
-          body: {'UserID':userInfo.userID.toString(),'UserIDList': _userList, 'RoomType': '1', 'RoomName':'none'});
+          body: {'UserID':userInfo.userID.toString(),'UserIDList': _userList, 'RoomType': '1',
+            'RoomName':'none','Token':userInfo.token.toString()});
       Map<String, dynamic> resAddNewRoom;
       resAddNewRoom = jsonDecode(response.body);
       print('RoomID:${resAddNewRoom['RoomID']}, LastMsgTime:${resAddNewRoom['LastMsgTime']}');
       DB.insertSingleRoom(resAddNewRoom['RoomID'], userName, userID, userImageUrl, resAddNewRoom['LastMsgTime'], 'none');
-      shutDownLongPolling();
-      setLongPolling();
+      if (io.Platform.isAndroid){
+        shutDownLongPolling();
+        setLongPolling();
+      }
       Navigator.of(context).pop();
       scaffold.showSnackBar(SnackBar(
         content: Text("聊天室新增完畢"),

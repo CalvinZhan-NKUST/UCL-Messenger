@@ -30,6 +30,7 @@ class _PersonalPageState extends State<PersonalPage> {
   var userName = '';
   var userImageUrl = '';
   int userID = 0;
+  var token = '';
   String passwordErr = '   ';
 
   void getUserInfo() async {
@@ -38,6 +39,7 @@ class _PersonalPageState extends State<PersonalPage> {
     userID = userInfo.userID;
     userName = userInfo.userName;
     userImageUrl = userInfo.userImageURL;
+    token = userInfo.token;
     globalString.GlobalString.userName = userName;
     print('使用者名稱：$userName');
     print('圖片連結：$userImageUrl');
@@ -326,8 +328,9 @@ class _PersonalPageState extends State<PersonalPage> {
                               var tokenURL =
                                   '${globalString.GlobalString.ipRedis}/saveToken';
                               var saveToken = await http.post(Uri.parse(tokenURL), body: {
-                                'UserID': globalString.GlobalString.userID,
-                                'Token': 'none'
+                                'UserID': userID,
+                                'Token': 'none',
+                                'ChatServerToken':token
                               });
                               print('SaveToken body:${saveToken.body}');
                             }
@@ -357,7 +360,7 @@ class _PersonalPageState extends State<PersonalPage> {
     String _updateUserNameUrl =
         '${globalString.GlobalString.ipMysql}/updateUserName';
     var responseChangeResult = await http.post(Uri.parse(_updateUserNameUrl),
-        body: {'UserID': userID.toString(), 'UserName': userName});
+        body: {'UserID': userID.toString(), 'UserName': userName, 'Token':token});
     var res = responseChangeResult.body.toString();
     print('更換結果：$res');
     if (res.toString() == 'ok') updateUserInfo(userID, userName);
@@ -404,7 +407,8 @@ class _PersonalPageState extends State<PersonalPage> {
     var responsePasswordResult = await http.post(Uri.parse(_updateUserPasswordUrl), body: {
       'UserID': userID.toString(),
       'oldPassword': oldPassword,
-      'newPassword': newPassword
+      'newPassword': newPassword,
+      'Token':token
     });
     var res = responsePasswordResult.body.toString();
     Navigator.of(context).pop();
@@ -448,7 +452,7 @@ class _PersonalPageState extends State<PersonalPage> {
   uploadFile(String type, String uploadPath) async {
     var request = http.MultipartRequest(
         'POST', Uri.parse('${globalString.GlobalString.ipRedis}/uploadFiles'));
-    request.fields.addAll({'FileType': '$type'});
+    request.fields.addAll({'FileType': '$type','UserID':userID.toString(),'Token':token});
     request.files.add(await http.MultipartFile.fromPath('File', '$uploadPath'));
     http.StreamedResponse response = await request.send();
     String fileUrl = await response.stream.bytesToString();
@@ -457,13 +461,14 @@ class _PersonalPageState extends State<PersonalPage> {
   }
 
   uploadUserImage(String userID, String imageUrl) async {
-    String _updateUserPasswordUrl =
+    String _uploadUserImageUrl =
         '${globalString.GlobalString.ipMysql}/uploadUserImage';
-    var responsePasswordResult = await http.post(Uri.parse(_updateUserPasswordUrl), body: {
+    var responseUploadUserImage = await http.post(Uri.parse(_uploadUserImageUrl), body: {
       'UserID': userID,
       'UserImageUrl': imageUrl,
+      'Token': token
     });
-    var res = responsePasswordResult.body.toString();
+    var res = responseUploadUserImage.body.toString();
     print('upload UserImage Result:$res');
     updateUserImageUrl(int.parse(userID), imageUrl);
   }

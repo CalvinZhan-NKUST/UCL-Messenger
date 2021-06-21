@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'dart:io' as io;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_msg/LongPolling.dart';
+import 'package:flutter_msg/Model.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_msg/SQLite.dart' as DB;
 import 'package:flutter_msg/GlobalVariable.dart' as globalString;
@@ -14,7 +17,7 @@ class FriendList extends StatefulWidget {
 
 final List<Widget> _friendsList = []; // 建立一個空陣列
 var _dataBaseFriendList = new List();
-var _dataBaseUserInfo = new List();
+List<UserInfo> _dataBaseUserInfo = new List();
 var _friendCheckList = new Map();
 
 @override
@@ -108,7 +111,7 @@ class _FriendList extends State<FriendList> {
     );
   }
 
-  void _submitText(String roomName) async {
+  Future<void> _submitText(String roomName) async {
     final scaffold = Scaffold.of(context);
     String userIDList = '';
     bool pass = true;
@@ -139,13 +142,16 @@ class _FriendList extends State<FriendList> {
         'UserID':_dataBaseUserInfo[0].userID.toString(),
         'UserIDList': userIDList,
         'RoomType': '2',
-        'RoomName': roomName
+        'RoomName': roomName,
+        'Token':_dataBaseUserInfo[0].token.toString()
       });
       Map<String, dynamic> resAddNewRoom;
       resAddNewRoom = jsonDecode(response.body);
       DB.insertSingleRoom(resAddNewRoom['RoomID'], roomName, '0', 'none', resAddNewRoom['LastMsgTime'], 'none');
-      shutDownLongPolling();
-      setLongPolling();
+      if (io.Platform.isAndroid){
+        shutDownLongPolling();
+        setLongPolling();
+      }
       scaffold.showSnackBar(SnackBar(
         content: Text("群組新增完畢"),
         action: SnackBarAction(

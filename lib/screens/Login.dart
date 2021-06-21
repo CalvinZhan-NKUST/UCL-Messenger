@@ -182,7 +182,7 @@ class _LoginState extends State<Login> {
 
       var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
       var chatRoom = await http
-          .post(Uri.parse(roomURL), body: {'UserName': userName, 'UserID': userID});
+          .post(Uri.parse(roomURL), body: {'UserName': userName, 'UserID': userID, 'Token':token});
       print('Response body:${chatRoom.body}');
       var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
       List<ChatUser> tagObjs =
@@ -228,7 +228,6 @@ class _LoginState extends State<Login> {
                       DB.insertRoom(_roomList, _maxSN);
                       DB.insertRoomList(
                           _roomList, _nameList, _idList, _imageList, _lastMsgTime, _action);
-                      updateUserChatRoomNum(userID);
                       Navigator.of(context).pop();
                       schoolIDController.clear();
                       passwordController.clear();
@@ -279,11 +278,4 @@ class _LoginState extends State<Login> {
           });
     }
   }
-}
-
-void updateUserChatRoomNum(String userID) async {
-  String roomNum = _roomList.length.toString();
-  var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
-  var res = await http.post(Uri.parse(url), body: {'UserID': userID, 'RoomNum': roomNum});
-  print('聊天室新增結果：${res.body}');
 }

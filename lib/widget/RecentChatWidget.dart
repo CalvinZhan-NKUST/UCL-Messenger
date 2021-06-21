@@ -9,6 +9,7 @@ class RecentChat extends StatefulWidget {
   final String roomID;
   final String friendID;
   final String friendImageUrl;
+  final String token;
 
   RecentChat({Key key,
     this.friendName,
@@ -17,7 +18,8 @@ class RecentChat extends StatefulWidget {
     this.userImageUrl,
     this.roomID,
     this.friendID,
-    this.friendImageUrl})
+    this.friendImageUrl,
+    this.token})
       : super(key: key);
 
   _RecentChatState createState() => _RecentChatState();
@@ -52,6 +54,7 @@ class _RecentChatState extends State<RecentChat>{
                   friendID: widget.friendID,
                   userImageUrl: widget.userImageUrl,
                   friendImageUrl: widget.friendImageUrl,
+                  token: widget.token,
                 )));
       },
       child: Container(

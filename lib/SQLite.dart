@@ -63,6 +63,7 @@ void _updateTableCompanyV1toV2(Batch batch) {
   batch.execute(
       'CREATE TABLE IF NOT EXISTS msgUpdate(MsgID INTEGER PRIMARY KEY, RoomMsgSN INTEGER, RoomID INTEGER,'
       'SendUserID INTEGER, SendName TEXT, ReceiveName TEXT, ReceiveUserID INTEGER, Text TEXT, MsgType TEXT, DateTime TEXT, UpdateProcess TEXT)');
+  batch.execute('ALTER TABLE msgUpdate ADD SendUserToken TEXT');
 }
 
 Future<void> insertNewUpdateMsg(
@@ -75,14 +76,15 @@ Future<void> insertNewUpdateMsg(
     String text,
     String msgType,
     String dateTime,
-    String updateProcess) async {
+    String updateProcess,
+    String sendUserToken) async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
   final Database db = await database;
   await db.execute(
-      'INSERT INTO msgUpdate (RoomMsgSN,RoomID,SendUserID,SendName,ReceiveName,ReceiveUserID,Text,MsgType,DateTime,UpdateProcess) '
-      'VALUES ($roomMsgSN, $roomID, $sendUserID, \'$sendName\', \'$receiveName\', $receiveUserID, \'$text\', \'$msgType\', \'$dateTime\', \'$updateProcess\')');
+      'INSERT INTO msgUpdate (RoomMsgSN,RoomID,SendUserID,SendName,ReceiveName,ReceiveUserID,Text,MsgType,DateTime,UpdateProcess,SendUserToken) '
+      'VALUES ($roomMsgSN, $roomID, $sendUserID, \'$sendName\', \'$receiveName\', $receiveUserID, \'$text\', \'$msgType\', \'$dateTime\', \'$updateProcess\', \'$sendUserToken\')');
   print('寫入完成：$text');
 }
 
@@ -103,7 +105,8 @@ Future<List<MessageUpdate>> selectUpdateData() async {
         text: maps[i]['Text'],
         msgType: maps[i]['MsgType'],
         dateTime: maps[i]['DateTime'],
-        updateProcess: maps[i]['UpdateProcess']);
+        updateProcess: maps[i]['UpdateProcess'],
+        sendUserToken: maps[i]['SendUserToken']);
   });
 }
 
@@ -125,7 +128,8 @@ Future<List<MessageUpdate>> selectUpdateMsgSN(String roomID) async {
         text: maps[i]['Text'],
         msgType: maps[i]['MsgType'],
         dateTime: maps[i]['DateTime'],
-        updateProcess: maps[i]['UpdateProcess']);
+        updateProcess: maps[i]['UpdateProcess'],
+        sendUserToken: maps[i]['SendUserToken']);
   });
 }
 
@@ -147,7 +151,8 @@ Future<List<MessageUpdate>> selectUpdateMsg(String roomID) async {
         text: maps[i]['Text'],
         msgType: maps[i]['MsgType'],
         dateTime: maps[i]['DateTime'],
-        updateProcess: maps[i]['UpdateProcess']);
+        updateProcess: maps[i]['UpdateProcess'],
+        sendUserToken: maps[i]['SendUserToken']);
   });
 }
 
@@ -295,7 +300,7 @@ Future<void> insertSingleRoom(String roomID, String userName, String userID,
   print('新增單一個聊天室');
   String insertSingleRoom = 'VALUES ';
   insertSingleRoom +=
-      '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\', , \'$action\')';
+      '($roomID, \'$userName\', $userID, \'$userImageUrl\', \'$lastMsgTime\', \'$action\')';
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );

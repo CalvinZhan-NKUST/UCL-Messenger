@@ -54,6 +54,8 @@ public class notifyUnit extends Service {
     private Timer reconnectTimer = new Timer();
     private Integer count = 0;
     private String roomList = "";
+    private String userID = "";
+    private String token = "";
     public static Integer serviceStart = 0;
     private int setClientCount = 0;
     private Map<String, String> clientMsgSN = new HashMap<String, String>();
@@ -83,7 +85,8 @@ public class notifyUnit extends Service {
         SQLiteDatabase sqLiteDataBase = openOrCreateDatabase("chatroom.db", MODE_PRIVATE, null);
         Cursor cursorDB = sqLiteDataBase.rawQuery("SELECT * FROM user", null);
         while (cursorDB.moveToNext()) {
-            String userID = cursorDB.getString((cursorDB.getColumnIndex("UserID")));
+            userID = cursorDB.getString((cursorDB.getColumnIndex("UserID")));
+            token = cursorDB.getString((cursorDB.getColumnIndex("Token")));
             clientID = "User_" + userID;
             Log.d("MQTT", "Service 查詢結果：" + " UserID=" + clientID);
         }
@@ -145,9 +148,10 @@ public class notifyUnit extends Service {
                 sqLiteDatabase.close();
                 cursor.close();
 
-
                 OkHttpClient notifyClient = new OkHttpClient().newBuilder().build();
                 FormBody.Builder formBody = new FormBody.Builder();
+                formBody.add("UserID", userID.toString());
+                formBody.add("Token", token);
                 formBody.add("RoomIDList", roomList);
                 Request notifyRequest = new Request.Builder()
                         .url(getIP + "/notify")
@@ -247,7 +251,7 @@ public class notifyUnit extends Service {
             } catch (MqttException e) {
                 e.printStackTrace();
             }
-            Log.d("MQTT", "連接成功 ");
+            Log.d("MQTT", "連接成功");
         }
 
         @Override
@@ -393,16 +397,16 @@ public class notifyUnit extends Service {
     }
 
     public void compareSN(Integer roomID, Integer serverSN) {
-        Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN + ",clientSN:"+clientMsgSN.get(roomID.toString()));
+        Log.d("Demo", "Compare roomID:" + roomID + ",serverSN:" + serverSN + ",clientSN:" + clientMsgSN.get(roomID.toString()));
         if (Integer.parseInt(clientMsgSN.get(roomID.toString())) < serverSN) {
             String getSN = String.valueOf(Integer.parseInt(clientMsgSN.get(roomID.toString())) + 1);
-            Log.d("Demo","需要取得訊息，訊息編號為："+getSN);
+            Log.d("Demo", "需要取得訊息，訊息編號為：" + getSN);
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    Log.d("Demo","開始取得新訊息");
+                    Log.d("Demo", "開始取得新訊息");
                     int msgPara = serverSN - Integer.parseInt(getSN);
-                    Log.d("Demo",serverSN+" , "+clientMsgSN.get(roomID.toString())+" , "+roomID.toString()+" , "+getSN+" , "+msgPara);
+                    Log.d("Demo", serverSN + " , " + clientMsgSN.get(roomID.toString()) + " , " + roomID.toString() + " , " + getSN + " , " + msgPara);
                     getNewMsg(roomID.toString(), getSN, msgPara);
                 }
             }).start();
@@ -413,13 +417,15 @@ public class notifyUnit extends Service {
     public void getNewMsg(String roomID, String msgSN, Integer msgPara) {
         globalVariable str = new globalVariable();
         String getIP = str.getIP();
-        Log.d("Demo",getIP+"/getMsg");
+        Log.d("Demo", getIP + "/getMsg");
 
         OkHttpClient getMsgClient = new OkHttpClient().newBuilder().build();
         FormBody formBody = new FormBody.Builder()
                 .add("RoomID", roomID)
                 .add("MsgID", msgSN)
                 .add("MsgPara", msgPara.toString())
+                .add("UserID", userID.toString())
+                .add("Token", token)
                 .build();
 
         Request getMsgRequest = new Request.Builder()
@@ -477,7 +483,7 @@ public class notifyUnit extends Service {
         serviceStart = 0;
         MainActivity.serviceStarted = 0;
         Log.d("Demo", "Service Destroy");
-        if (client!=null){
+        if (client != null) {
             try {
                 client.disconnect();
                 client.unregisterResources();

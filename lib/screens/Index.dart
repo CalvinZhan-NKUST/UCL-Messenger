@@ -55,7 +55,8 @@ class IndexScreenState extends State<IndexScreen> {
             updateMsg[0].text,
             updateMsg[0].msgType,
             updateMsg[0].dateTime,
-            updateMsg[0].roomMsgSN);
+            updateMsg[0].roomMsgSN,
+            updateMsg[0].sendUserToken);
       }
     }
   }
@@ -85,11 +86,14 @@ class IndexScreenState extends State<IndexScreen> {
   }
 
   void getMsgPara() async {
-    print('userID:${globalString.GlobalString.userID}');
+
+    List<UserInfo> user = new List();
+    user = await DB.selectUser();
+
     var url = '${globalString.GlobalString.ipMysql}/getConfigPara';
     print(url);
     var response = await http.post(Uri.parse(url),
-        body: {'UserID': globalString.GlobalString.userID});
+        body: {'UserID': user[0].userID.toString(), 'Token':user[0].token});
     print('getConfigPara body:${response.body}');
     res = jsonDecode(response.body);
     print(res['MsgPara']);
@@ -129,6 +133,7 @@ class IndexScreenState extends State<IndexScreen> {
             userName: userInfo.userName,
             friendImageUrl: room.userImageUrl.toString(),
             userImageUrl: userInfo.userImageURL.toString(),
+            token: userInfo.token.toString(),
           ));
     }
 
@@ -136,7 +141,7 @@ class IndexScreenState extends State<IndexScreen> {
       callMethodChannel.runService();
     } else if (io.Platform.isIOS) {
       polling.setRoomList(pollingRoomList);
-      polling.setUserID(userInfo.userID.toString());
+      polling.setUserID(userInfo.userID.toString(), userInfo.token.toString());
     }
     print('好友人數：${dataBaseRoomList.length}');
   }

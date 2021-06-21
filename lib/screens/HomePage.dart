@@ -7,6 +7,7 @@ import 'package:flutter_msg/GlobalVariable.dart' as globalString;
 import 'package:flutter/material.dart';
 import 'package:flutter_apns/flutter_apns.dart';
 import 'package:flutter_msg/LongPolling.dart' as polling;
+import 'package:flutter_msg/Model.dart';
 import 'package:flutter_msg/screens/BottomNavigation.dart';
 import 'package:flutter_msg/screens/Login.dart';
 import 'package:http/http.dart' as http;
@@ -25,7 +26,7 @@ class _HomePageState extends State<HomePage> {
   var dataBaseUserInfo = new List();
   final connector = createPushConnector();
 
-  Future<void> _register(String userID) async {
+  Future<void> _register(String userID, String token) async {
     final connector = this.connector;
     connector.configure(
       onLaunch: (data) => onPush('onLaunch', data),
@@ -39,7 +40,7 @@ class _HomePageState extends State<HomePage> {
       if (io.Platform.isIOS) {
         var tokenURL = '${globalString.GlobalString.ipRedis}/saveToken';
         var saveToken = await http
-            .post(Uri.parse(tokenURL), body: {'UserID': userID, 'Token': _token});
+            .post(Uri.parse(tokenURL), body: {'UserID': userID, 'Token': _token, 'ChatServerToken': token});
         print('SaveToken body:${saveToken.body}');
       }
     });
@@ -159,14 +160,14 @@ class _HomePageState extends State<HomePage> {
       var userInfo = dataBaseUserInfo[0];
       print('有資料可以進行持續登入');
       if (io.Platform.isIOS) {
-        _register(userInfo.userID.toString());
+        _register(userInfo.userID.toString(), userInfo.token.toString());
       }
       Map<String, dynamic> res;
       var _url = '${globalString.GlobalString.ipRedis}/keepLogin';
       print(
           'send uuid UserID:${userInfo.userID.toString()}, Token:${userInfo.token}');
       var response = await http.post(Uri.parse(_url),
-          body: {'UserID': userInfo.userID.toString(), 'uuid': userInfo.token});
+          body: {'UserID': userInfo.userID.toString(), 'Token': userInfo.token});
       print('Response body:${response.body}');
       res = jsonDecode(response.body);
       print(res['res']);
@@ -200,7 +201,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   void navigationToIndex() {
-    polling.checkRoomNum();
     Navigator.push(context,
         MaterialPageRoute(builder: (context) => BottomNavigationController()));
   }

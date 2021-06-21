@@ -230,6 +230,7 @@ class MessageUpdate {
   final String msgType;
   final String dateTime;
   final String updateProcess;
+  final String sendUserToken;
 
   MessageUpdate({
       this.roomMsgSN,
@@ -241,7 +242,8 @@ class MessageUpdate {
       this.msgType,
       this.text,
       this.dateTime,
-      this.updateProcess});
+      this.updateProcess,
+      this.sendUserToken});
 
   Map<String, dynamic> toMap() {
     return {
@@ -254,14 +256,15 @@ class MessageUpdate {
       'msgType':msgType,
       'text':text,
       'dateTime':dateTime,
-      'updateProcess':updateProcess
+      'updateProcess':updateProcess,
+      'sendUserToken':sendUserToken
     };
   }
 
   @override
   String toString() {
     return '{ $roomMsgSN, $roomID, $sendUserID, $sendName, $receiveName, '
-        '$receiveUserID, $msgType, $text, $dateTime, $updateProcess }';
+        '$receiveUserID, $msgType, $text, $dateTime, $updateProcess, $sendUserToken}';
   }
 }
 

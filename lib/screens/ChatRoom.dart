@@ -21,7 +21,8 @@ class ChatScreen extends StatefulWidget {
       this.roomID,
       this.friendID,
       this.friendImageUrl,
-      this.userImageUrl})
+      this.userImageUrl,
+      this.token})
       : super(key: key);
   final String friendID;
   final String friendName;
@@ -30,6 +31,7 @@ class ChatScreen extends StatefulWidget {
   final String userID;
   final String userImageUrl;
   final String roomID;
+  final String token;
 
   @override
   State<ChatScreen> createState() => new ChatScreenState();
@@ -46,6 +48,7 @@ int _nextSN = 0;
 String _mainUserID = '';
 String _mainUserName = '';
 String _mainUserImageUrl = '';
+String _mainUserToken = '';
 String _friendID = '';
 String _friendName = '';
 String _friendImageUrl = '';
@@ -108,7 +111,8 @@ class ChatScreenState extends State<ChatScreen> {
           'url',
           type,
           DateTime.now().millisecondsSinceEpoch.toString(),
-          'uploadingFile');
+          'uploadingFile',
+          _mainUserToken);
     } else {
       var msgSN = updateMsgSN[0];
       setMsgSN = int.parse(msgSN) + 1;
@@ -122,7 +126,8 @@ class ChatScreenState extends State<ChatScreen> {
           'url',
           type,
           DateTime.now().millisecondsSinceEpoch.toString(),
-          'uploadingFile');
+          'uploadingFile',
+          _mainUserToken);
     }
 
     getUpdateMsgSN = await DB.selectUpdateMsgSN(_recentRoomID);
@@ -130,14 +135,17 @@ class ChatScreenState extends State<ChatScreen> {
 
     var request = http.MultipartRequest(
         'POST', Uri.parse('${globalString.GlobalString.ipRedis}/uploadFiles'));
-    request.fields.addAll({'FileType': '$type'});
+    request.fields.addAll({
+      'FileType': '$type',
+      'UserID': _mainUserID.toString(),
+      'Token': _mainUserToken
+    });
     request.files.add(await http.MultipartFile.fromPath('File', '$uploadPath'));
     http.StreamedResponse response = await request.send();
     String fileUrl = await response.stream.bytesToString();
     print('檔案上傳結果：$fileUrl');
-    _submitText(_recentRoomID, _mainUserID, _mainUserName, _friendID,
-        _friendName, 'Text', _chatController.text.trim(), 0);
-
+//    _submitText(_recentRoomID, _mainUserID, _mainUserName, _friendID,
+//        _friendName, 'Text', _chatController.text.trim(), 0);
     _submitText(
         msgUpdateInfo.roomID.toString(),
         msgUpdateInfo.sendUserID.toString(),
@@ -146,7 +154,8 @@ class ChatScreenState extends State<ChatScreen> {
         msgUpdateInfo.receiveName,
         type,
         fileUrl,
-        setMsgSN);
+        setMsgSN,
+        _mainUserToken);
   }
 
   Future<void> _checkMsg(String msgUrl) async {
@@ -154,7 +163,9 @@ class ChatScreenState extends State<ChatScreen> {
     var response = await http.post(Uri.parse(msgUrl), body: {
       'RoomID': _recentRoomID,
       'MsgID': '0',
-      'MsgPara': globalString.GlobalString.msgPara
+      'MsgPara': globalString.GlobalString.msgPara,
+      'UserID': _mainUserID,
+      'Token': _mainUserToken
     });
     print('Response body:${response.body}');
 
@@ -192,8 +203,12 @@ class ChatScreenState extends State<ChatScreen> {
 
   void setHistoryMessage(String msgSN) async {
     _nextSN = int.parse(msgSN) - 10;
-    var response = await http.post(Uri.parse(_msgHistory),
-        body: {'MsgID': msgSN, 'RoomID': widget.roomID});
+    var response = await http.post(Uri.parse(_msgHistory), body: {
+      'MsgID': msgSN,
+      'RoomID': widget.roomID,
+      'UserID': _mainUserID,
+      'Token': _mainUserToken
+    });
     historyMsg = jsonDecode(response.body);
     var hisMsgJson = jsonDecode(response.body)['res'] as List;
     List<MessengerChat> hisObjs =
@@ -327,6 +342,7 @@ class ChatScreenState extends State<ChatScreen> {
     _mainUserID = widget.userID;
     _mainUserName = widget.userName;
     _mainUserImageUrl = widget.userImageUrl;
+    _mainUserToken = widget.token;
     _recentRoomID = widget.roomID;
     _friendID = widget.friendID;
     _friendName = widget.friendName;
@@ -399,7 +415,8 @@ class ChatScreenState extends State<ChatScreen> {
                               _friendName,
                               'Text',
                               _chatController.text.trim(),
-                              0);
+                              0,
+                              _mainUserToken);
                         }
                       },
                     ),
@@ -418,15 +435,15 @@ class ChatScreenState extends State<ChatScreen> {
       String receiveName,
       String msgType,
       String content,
-      int msgSN) async {
-    
+      int msgSN,
+      String token) async {
     insertMessageWidget(sendUserID, msgType, sendUserName, content, 0);
 
     if (msgType == 'Text') {
       print('寫入資料：$content');
       _chatController.clear();
-      await setMsgUpdate(roomID, sendUserID, sendUserName, receiveUserID, receiveName,
-          msgType, content, 'unprocessed');
+      await setMsgUpdate(roomID, sendUserID, sendUserName, receiveUserID,
+          receiveName, msgType, content, 'unprocessed', token);
     } else {
       await DB.updateUpdateMsg(content, int.parse(roomID), msgSN);
       sendMessage(
@@ -438,7 +455,8 @@ class ChatScreenState extends State<ChatScreen> {
           content,
           msgType,
           DateTime.now().millisecondsSinceEpoch.toString(),
-          msgSN);
+          msgSN,
+          token);
     }
   }
 
@@ -450,7 +468,8 @@ class ChatScreenState extends State<ChatScreen> {
       String receiveName,
       String type,
       String content,
-      String process) async {
+      String process,
+      String token) async {
     int msgSN = 0;
     updateMsgSN.clear();
     updateMsgSN = await DB.selectUpdateMsgSN(roomID);
@@ -472,13 +491,14 @@ class ChatScreenState extends State<ChatScreen> {
         content,
         type,
         DateTime.now().millisecondsSinceEpoch.toString(),
-        process);
+        process,
+        token);
 
     checkChatRoomAction.clear();
     checkChatRoomAction = await DB.specificRoomAction(roomID);
     var roomAction = checkChatRoomAction[0];
 
-    if (roomAction.action.toString() != 'uploading'){
+    if (roomAction.action.toString() != 'uploading') {
       sendMessage(
           roomID,
           sendUserID,
@@ -488,7 +508,8 @@ class ChatScreenState extends State<ChatScreen> {
           content,
           type,
           DateTime.now().millisecondsSinceEpoch.toString(),
-          msgSN);
+          msgSN,
+          token);
       await DB.updateRoomAction('uploading', roomID);
     }
   }

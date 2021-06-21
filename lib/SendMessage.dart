@@ -15,7 +15,8 @@ Future<void> sendMessage(
     String content,
     String msgType,
     String dateTime,
-    int msgSN) async {
+    int msgSN,
+    String sendUserToken) async {
   try {
     print('執行訊息傳送，時間：${DateTime.now().minute}分${DateTime.now().second}秒');
     Map<String, dynamic> resMsgSend;
@@ -29,7 +30,8 @@ Future<void> sendMessage(
       'ReceiveUserID': receiveID,
       'Text': content,
       'MsgType': msgType,
-      'DateTime': dateTime
+      'DateTime': dateTime,
+      'Token':sendUserToken
     });
     http.StreamedResponse response =
         await request.send().timeout(Duration(seconds: 10), onTimeout: () {
@@ -58,7 +60,8 @@ Future<void> sendMessage(
               sendMsg.text,
               sendMsg.msgType,
               sendMsg.dateTime,
-              sendMsg.roomMsgSN);
+              sendMsg.roomMsgSN,
+              sendMsg.sendUserToken);
         }else{
           DB.updateRoomAction('none', roomID);
           print('訊息上傳完畢，更新聊天室狀態');
@@ -74,13 +77,13 @@ Future<void> sendMessage(
     print('重傳開始的時間：${DateTime.now().minute}分${DateTime.now().second}秒\n');
 
     sendMessage(roomID, sendUserID, sendName, receiveName, receiveID, content,
-        msgType, dateTime, msgSN);
+        msgType, dateTime, msgSN, sendUserToken);
   } on SocketException catch (e) {
     print('socket error:$e');
     print('重傳開始的時間：${DateTime.now().minute}分${DateTime.now().second}秒\n');
 
     sendMessage(roomID, sendUserID, sendName, receiveName, receiveID, content,
-        msgType, dateTime, msgSN);
+        msgType, dateTime, msgSN, sendUserToken);
   } finally {
     print('finally');
   }

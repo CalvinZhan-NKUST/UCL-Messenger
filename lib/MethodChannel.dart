@@ -57,12 +57,10 @@ void checkMessageOrNewRoom (String roomID, String userID, String name, String te
 
   print('使用者目前位置：${userLocate.place.toString()}');
   print(roomID);
-  if (msgType!='NewRoom'){
+  if (msgType != 'NewRoom') {
     if (userLocate.place.toString() != roomID)
       await DB.updateMsgSN(roomID, msgID.toString());
     else
       chat.setNewMsg(roomID, userID, name, text, msgType, msgID);
-  }else
-    polling.checkRoomNum();
-
+  }
 }

@@ -9,7 +9,6 @@ import 'package:flutter_msg/screens/Index.dart' as Index;
 import 'package:flutter_msg/MethodChannel.dart' as callMethodChannel;
 import 'package:flutter_msg/Model.dart';
 
-
 var period = const Duration(seconds: 60);
 bool timeStart = false;
 var clientRoomList = new List();
@@ -17,6 +16,7 @@ int _times = 0;
 Timer _pollingTimer;
 Map<String, String> client = {};
 String _userID = '';
+String _token = '';
 String locateRoomID = '';
 
 final BehaviorSubject<ReceivedNotification> didReceiveLocalNotificationSubject =
@@ -70,9 +70,10 @@ void setRoomList(List roomList) {
   print('setRoomList');
 }
 
-void setUserID(String chatUserID) {
+void setUserID(String chatUserID, String userToken) {
   _userID = chatUserID;
-  print('chatUser:$chatUserID,UserID:$_userID');
+  _token = userToken;
+  print('chatUser:$chatUserID,UserID:$_userID,Token:$_token');
 }
 
 void setLocateRoomID(String roomID) {
@@ -84,9 +85,9 @@ void longPolling(String roomNotify) {
   if (timeStart == false) {
     timeStart = true;
     _pollingTimer = new Timer.periodic(period, (Timer timer) async {
-      checkRoomNum();
       var url = '${globalString.GlobalString.ipRedis}/notify';
-      var response = await http.post(Uri.parse(url), body: {'RoomIDList': roomNotify});
+      var response =
+          await http.post(Uri.parse(url), body: {'RoomIDList': roomNotify,'UserID':_userID,'Token':_token});
       print('LongPolling response body:${response.body}');
       var tagObjsJson = jsonDecode(response.body)['res'] as List;
       List<RoomMaxSN> tagObjs =
@@ -127,17 +128,21 @@ class CompareMaxSN {
 Future<void> getNewestMsg(String roomID, String msgID, String msgPara) async {
   int _sendID = int.parse(msgID) + 1;
   var url = '${globalString.GlobalString.ipRedis}/getMsg';
-  var response = await http.post(Uri.parse(url),
-      body: {'RoomID': roomID, 'MsgID': _sendID.toString(), 'MsgPara': msgPara});
+  var response = await http.post(Uri.parse(url), body: {
+    'RoomID': roomID,
+    'MsgID': _sendID.toString(),
+    'MsgPara': msgPara
+  });
   print('Response body in getNewMsg:${response.body}');
   var tagObjsJson = jsonDecode(response.body)['res'] as List;
   List<MessengerPolling> tagObjs =
       tagObjsJson.map((tagJson) => MessengerPolling.fromJson(tagJson)).toList();
   print(tagObjs);
 
-  for (int i =0; i< tagObjs.length; i++){
+  for (int i = 0; i < tagObjs.length; i++) {
     var newMsg = tagObjs[i];
-    callMethodChannel.checkMessageOrNewRoom(newMsg.roomID, newMsg.sendUserID, newMsg.sendName, newMsg.text, newMsg.msgType, newMsg.msgID);
+    callMethodChannel.checkMessageOrNewRoom(newMsg.roomID, newMsg.sendUserID,
+        newMsg.sendName, newMsg.text, newMsg.msgType, newMsg.msgID);
   }
 }
 
@@ -150,65 +155,6 @@ Future<void> setFirstMaxSN(String roomID, String msgSN) async {
     sqlite.setClientCache();
     print('Set結果：${await sqlite.chatRoom()}');
   }
-}
-
-Future<void> checkRoomNum() async{
-  var dataBaseUserInfo = new List();
-  dataBaseUserInfo = await sqlite.selectUser();
-  var userInfo = dataBaseUserInfo[0];
-  var url = '${globalString.GlobalString.ipRedis}/getRoomNum';
-  var response = await http.post(Uri.parse(url), body:{
-    'UserID':userInfo.userID.toString(),
-  });
-  Map<String, dynamic> roomNumServer= jsonDecode(response.body);
-  print('Server的聊天室數量：${roomNumServer['RoomNum']}');
-
-  String roomNumClient = await sqlite.countChatRoomQuantity();
-  print('Client的聊天室數量：$roomNumClient');
-
-  if ((roomNumServer['RoomNum'].toString()) != (roomNumClient.toString())){
-    print('聊天室數量不對');
-
-    var roomURL = '${globalString.GlobalString.ipMysql}/getChatRoomList';
-    var chatRoom = await http
-        .post(Uri.parse(roomURL), body: {'UserName': userInfo.userName.toString(), 'UserID': userInfo.userID.toString()});
-    print('Response body:${chatRoom.body}');
-    var tagObjsJson = jsonDecode(chatRoom.body)['res'] as List;
-    List<ChatUser> tagObjs = tagObjsJson.map((tagJson) => ChatUser.fromJson(tagJson)).toList();
-    print(tagObjs);
-
-    var dataBaseRoomList = new List();
-    int count = 0;
-    dataBaseRoomList = await sqlite.selectRoomList();
-
-    for (var i = 0; i < tagObjs.length; i++){
-      for (var j =0; j < dataBaseRoomList.length; j++){
-        if (tagObjs[i].roomID.toString() == dataBaseRoomList[j].roomID.toString()){
-          count++;
-        }
-      }
-      if (count==0){
-        await sqlite.insertSingleRoom(tagObjs[i].roomID.toString(), tagObjs[i].userName.toString(),
-            tagObjs[i].userID.toString(), tagObjs[i].userImageUrl.toString(), tagObjs[i].lastMsgTime.toString(), 'none');
-        print('新增聊天室完成');
-        var locate = await sqlite.selectLocate();
-        var userLocate = locate[0];
-        print('${userLocate.place.toString()}');
-        if (userLocate.place.toString()=='Index')
-          Index.IndexScreenState().refreshChatRoomList();
-      }
-      count=0;
-    }
-    updateUserChatRoomNum(userInfo.userID.toString(), tagObjs.length.toString());
-  }
-}
-
-
-void updateUserChatRoomNum(String userID, String roomNum) async{
-  var url = '${globalString.GlobalString.ipRedis}/setRoomNum';
-  var res =
-  await http.post(Uri.parse(url), body: {'UserID': userID, 'RoomNum': roomNum});
-  print('聊天室新增結果：${res.body}');
 }
 
 class RoomMaxSN {
