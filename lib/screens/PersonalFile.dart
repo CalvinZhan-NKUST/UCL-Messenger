@@ -328,7 +328,7 @@ class _PersonalPageState extends State<PersonalPage> {
                               var tokenURL =
                                   '${globalString.GlobalString.ipRedis}/saveToken';
                               var saveToken = await http.post(Uri.parse(tokenURL), body: {
-                                'UserID': userID,
+                                'UserID': userID.toString(),
                                 'Token': 'none',
                                 'ChatServerToken':token
                               });

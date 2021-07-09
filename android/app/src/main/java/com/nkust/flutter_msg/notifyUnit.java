@@ -62,6 +62,8 @@ public class notifyUnit extends Service {
     private static MqttAndroidClient client;
     private MqttConnectOptions conOpt;
 
+    private int testCount = 0;
+
     private String host = "tcp://chatapp.54ucl.com:1883";
     private String userName = "yoChiMQTT";
     private String passWord = "C217_mia";
@@ -264,6 +266,7 @@ public class notifyUnit extends Service {
     private MqttCallback mqttCallback = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) throws Exception {
+            testCount++;
             Log.d("MQTT", "收到的訊息:" + message.toString());
             String newMessage = new String(message.getPayload());
             JSONObject jsonMQTTObj = new JSONObject(newMessage);
@@ -273,10 +276,11 @@ public class notifyUnit extends Service {
             String msgID = jsonMQTTObj.getString("MsgID");
             String msgType = jsonMQTTObj.getString("MsgType");
             String userID = jsonMQTTObj.getString("UserID");
+            Log.d("MQTT", "訊息次數:" + testCount);
 
-            setMessage(roomID, userID, sendName, content, msgType, msgID);
-            notification(sendName, content);
-            saveClientSN(Integer.parseInt(roomID), Integer.parseInt(msgID));
+//            setMessage(roomID, userID, sendName, content, msgType, msgID);
+//            notification(sendName, content);
+//            saveClientSN(Integer.parseInt(roomID), Integer.parseInt(msgID));
         }
 
         @Override

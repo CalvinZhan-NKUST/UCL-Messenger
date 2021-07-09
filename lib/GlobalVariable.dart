@@ -8,7 +8,7 @@ class GlobalString {
   static final String versionErr = '版本錯誤，請更新';
   static final String changeName = '請輸入新的使用者名稱';
   static String msgPara = '';
-  static final String appVersion = '1.7.3';
+  static final String appVersion = '1.8.0';
   static String serverVersion = '';
   static final String iOSAppUrlLink =
       'https://apps.apple.com/us/app/ucl-messenger/id1547578801';

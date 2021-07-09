@@ -35,6 +35,10 @@ class _LoginState extends State<Login> {
     _roomList.clear();
     _nameList.clear();
     _idList.clear();
+    _imageList.clear();
+    _maxSN.clear();
+    _lastMsgTime.clear();
+    _action.clear();
     permissionRequest();
     super.initState();
   }

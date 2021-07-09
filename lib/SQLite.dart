@@ -21,7 +21,7 @@ connectDB() async {
   return ourDb;
 }
 
-//创建数据库表
+//創建資料庫
 void _onCreate(Database db, int version) async {
   var batch = db.batch();
   _createTableCompanyV1(batch);
@@ -88,6 +88,7 @@ Future<void> insertNewUpdateMsg(
   print('寫入完成：$text');
 }
 
+//查詢整張資料表
 Future<List<MessageUpdate>> selectUpdateData() async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
@@ -156,6 +157,7 @@ Future<List<MessageUpdate>> selectUpdateMsg(String roomID) async {
   });
 }
 
+//更新訊息為未上傳狀態(影片、照片)
 Future<void> updateUpdateMsg(String content, int roomID, int roomMsgSN) async{
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
@@ -164,6 +166,7 @@ Future<void> updateUpdateMsg(String content, int roomID, int roomMsgSN) async{
   await db.execute('UPDATE msgUpdate SET UpdateProcess=\'unprocessed\' and Text=\'$content\' WHERE RoomID=$roomID and RoomMsgSN=$roomMsgSN');
 }
 
+//更新訊息上傳狀態為"完成"
 Future<void> updateMsgProcess(int roomID, int roomMsgSN) async{
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
@@ -313,6 +316,7 @@ Future<void> insertSingleRoom(String roomID, String userName, String userID,
   await db.rawInsert('INSERT INTO roomsn (RoomID, MaxSN) $insertSN');
 }
 
+//更新聊天室最新一則訊息的時間
 Future<void> updateRoomListTime(String dateTime, String roomID) async {
   print('更新聊天室最新時間');
   final database = openDatabase(
@@ -323,8 +327,9 @@ Future<void> updateRoomListTime(String dateTime, String roomID) async {
       'update roomList set LastMsgTime=\'$dateTime\' where RoomID=\'$roomID\'');
 }
 
+//更新聊天室狀態
 Future<void> updateRoomAction(String action, String roomID) async {
-  print('更新聊天室動作動作');
+  print('更新聊天室狀態');
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
   );
@@ -341,7 +346,6 @@ Future<List<RoomList>> selectRoomList() async {
   final Database db = await database;
   final List<Map<String, dynamic>> maps =
       await db.query('roomList', orderBy: 'LastMsgTime desc');
-//  await db.close();
   return List.generate(maps.length, (i) {
     return RoomList(
       roomID: maps[i]['RoomID'],
@@ -354,7 +358,7 @@ Future<List<RoomList>> selectRoomList() async {
   });
 }
 
-//取得聊天室列表
+//查詢特定聊天室的狀態
 Future<List<RoomList>> specificRoomAction(String roomID) async {
   final database = openDatabase(
     join(await getDatabasesPath(), _dataBase),
@@ -400,6 +404,7 @@ Future<void> deleteTableData() async {
   db.execute('DELETE FROM locate;');
   db.execute('DELETE FROM user;');
   db.execute('DELETE FROM roomList;');
+  db.execute('DELETE FROM msgUpdate;');
   print('刪除資料表資料');
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
@@ -417,6 +422,7 @@ Future<void> dropTable() async {
   db.execute('DROP TABLE locate;');
   db.execute('DROP TABLE user;');
   db.execute('DROP TABLE roomList;');
+  db.execute('DROP TABLE msgUpdate;');
   print('刪除資料表資料');
   if (_notCloseToOften == 10) {
     _notCloseToOften = 0;
